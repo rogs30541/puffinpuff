@@ -82,5 +82,33 @@ run('git push origin main');
 console.log(`[release] 推送 tag ${tag}...`);
 run(`git push origin ${tag} --force`);
 
+// 7. 若有 installer .exe，自動建 GitHub Release + 上傳 binary
+const path = require('node:path');
+const fs = require('node:fs');
+const installerPath = path.join(__dirname, '..', 'release', `海鸚泡芙 PuffinPuff-${version}-Setup.exe`);
+if (fs.existsSync(installerPath)) {
+  const sizeMB = (fs.statSync(installerPath).size / 1024 / 1024).toFixed(1);
+  console.log(`\n[release] 發現 installer (${sizeMB} MB)，建立 GitHub Release...`);
+  console.log(`[release] $ gh release create ${tag} ...`);
+  // 先刪舊的同名 Release（若有）— 避免重打包同版本失敗
+  try {
+    execSync(`gh release delete ${tag} --yes`, { stdio: ['pipe', 'pipe', 'pipe'] });
+    console.log(`[release] 已刪除舊 Release ${tag}`);
+  } catch {
+    // 沒有舊的，跳過
+  }
+  // 建新 Release + 上傳 installer
+  const releaseNotes = `PuffinPuff ${tag}\n\n下載 \`海鸚泡芙 PuffinPuff-${version}-Setup.exe\` 安裝。\n\n完整變更紀錄請見 [CHANGELOG.md](../blob/main/CHANGELOG.md)。`;
+  // 用 stdin 傳 notes 避免 Windows 命令列轉義問題
+  execSync(
+    `gh release create ${tag} "${installerPath}" --title "${tag}" --notes-file -`,
+    { input: releaseNotes, stdio: ['pipe', 'inherit', 'inherit'] }
+  );
+  console.log(`[release] ✅ Installer 已上傳到 Release`);
+} else {
+  console.log(`\n[release] ⚠ 找不到 installer ${installerPath}`);
+  console.log('[release]   如果你只跑 git:push（不打包），這是預期；只跑 release:win 才會產 installer');
+}
+
 console.log(`\n[release] ✅ ${tag} 已推送到 GitHub`);
 console.log(`[release] 開啟 ${remoteUrl.replace(/\.git$/, '')}/releases/tag/${tag} 查看`);
