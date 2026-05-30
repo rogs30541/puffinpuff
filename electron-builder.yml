@@ -1,0 +1,49 @@
+appId: tw.vvlee.puffinpuff
+productName: 海鸚泡芙 PuffinPuff
+copyright: © 2026 VVLEE
+
+directories:
+  output: release
+  buildResources: build
+
+# 哪些檔案要進 asar / 安裝包
+files:
+  - out/**/*
+  - package.json
+  - secrets/*.json  # OAuth credentials（V1 個人版，bundled）
+
+# 額外資源（不進 asar，直接放在 resources/ 下，runtime 可讀）
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
+
+# native module / 含 binary 的依賴必須解壓出 asar 才能執行
+asarUnpack:
+  - node_modules/ffmpeg-static/**/*
+  - node_modules/ffprobe-static/**/*
+  - node_modules/sql.js/dist/**/*
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: "${productName}-${version}-Setup.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 海鸚泡芙 PuffinPuff
+  language: 1028  # zh-TW
+  warningsAsErrors: false

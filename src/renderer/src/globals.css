@@ -1,0 +1,151 @@
+:root {
+  --color-bg-app: #FBF7F2;
+  --color-bg-card: #FFFFFF;
+  --color-border: #E5DCD3;
+  --color-text: #3F3A36;
+  --color-text-secondary: #7C736B;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Noto Sans TC', 'Inter', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100vh;
+  width: 100%;
+}
+
+button {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D2CCC4;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B3ABA0;
+}
+
+/* 載入動畫（PublishProgress、Modal loading 等使用）*/
+@keyframes puffin-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: puffin-spin 1s linear infinite;
+}
+
+/* === react-big-calendar 馬卡龍配色客製 === */
+.rbc-calendar {
+  font-family: inherit;
+  background: #FFFFFF;
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid #E5DCD3;
+}
+
+.rbc-toolbar {
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.rbc-toolbar button {
+  border-radius: 10px;
+  border: 1px solid #E5DCD3;
+  color: #3F3A36;
+  padding: 6px 14px;
+  transition: all 150ms ease;
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button:focus {
+  background: #E2F5EC;
+  border-color: #B8E0D2;
+}
+
+.rbc-toolbar button.rbc-active {
+  background: #6FBF9D;
+  color: #FFFFFF;
+  border-color: #6FBF9D;
+  box-shadow: 0 2px 6px rgba(63, 58, 54, 0.06);
+}
+
+.rbc-toolbar-label {
+  font-weight: 700;
+  color: #3F3A36;
+  font-size: 17px;
+}
+
+.rbc-header {
+  padding: 10px 6px;
+  font-weight: 600;
+  color: #7C736B;
+  border-bottom: 1px solid #E5DCD3;
+  background: #FBF7F2;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-time-header {
+  border: 1px solid #E5DCD3;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rbc-today {
+  background: #FCE4A6 !important;
+}
+
+.rbc-off-range-bg {
+  background: #FBF7F2;
+}
+
+.rbc-event {
+  background: #D8C6E8 !important;
+  color: #3F3A36 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 2px 6px !important;
+  font-size: 11px;
+}
+
+.rbc-event:focus,
+.rbc-event.rbc-selected {
+  background: #B393CF !important;
+  color: #FFFFFF !important;
+  outline: none;
+}
+
+.rbc-day-slot .rbc-event {
+  border-radius: 6px !important;
+}
+
+.rbc-current-time-indicator {
+  background-color: #E08B97;
+  height: 2px;
+}

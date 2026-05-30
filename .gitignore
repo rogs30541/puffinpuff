@@ -1,0 +1,35 @@
+# Node / TypeScript build outputs
+node_modules/
+dist/
+out/
+*.tsbuildinfo
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 機密憑證（絕對不可上傳 — 含 OAuth client secrets + tokens）
+secrets/*.json
+secrets/*.txt
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Electron Builder 輸出（200MB+ exe / 完整 unpacked / blockmap）
+release/
+*.exe
+*.dmg
+*.AppImage
+*.blockmap
+
+# 不排除 build/（裡面是 app 圖示 SOURCE 資源，要進版控）
+# 不排除 scripts/（建置輔助腳本）
+
+# Claude / IDE worktree
+.claude/
