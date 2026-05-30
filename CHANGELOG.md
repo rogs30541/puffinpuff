@@ -4,6 +4,37 @@
 
 ---
 
+## 🤖 自動 GitHub 推送機制（2026-05-29 設定）
+
+從現在起，**打包流程自動同步到 GitHub**：
+
+### 新 npm script
+```bash
+npm run release:win    # = build:win + 自動 commit + tag + push
+npm run git:push       # 只跑 push（不重新打包）
+npm run build:win      # 只打包不 push（舊行為保留）
+```
+
+### 自動流程（`scripts/post-release.cjs`）
+1. `git add -A` 所有變更
+2. 若有變更 → commit（訊息 `v<version> — release build`）
+3. `git tag -f v<version>`（允許同版本重打覆蓋）
+4. `git push origin main`
+5. `git push origin v<version> --force`
+
+### Repo
+- 🔒 Private：https://github.com/rogs30541/puffinpuff
+- 已透過 `.gitignore` 排除 `secrets/*.json`、`release/`、`node_modules/`
+
+### 工作流（以後升版本）
+1. 改 code
+2. `package.json` bump 版本（例 0.6.9 → 0.6.10）
+3. CHANGELOG 加新 entry
+4. `npm run release:win`
+5. ☕ 等 5-7 分鐘 → installer 在 release/、code + tag 推到 GitHub
+
+---
+
 ## ✅ IG 上傳問題結案（2026-05-29 確認）
 
 **v0.6.9 確認 IG Reels 上傳穩定可用。** 三平台（YT / FB / IG）一鍵發布全通。
