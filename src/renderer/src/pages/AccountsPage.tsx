@@ -18,6 +18,7 @@ import {
   IconBrandYoutube,
   IconBrandFacebook,
   IconBrandInstagram,
+  IconBrandThreads,
   IconLink,
   IconLinkOff,
   IconCheck,
@@ -33,7 +34,7 @@ interface PlatformDef {
   name: string;
   description: string;
   color: string;
-  connectKind: 'google' | 'meta' | 'none';
+  connectKind: 'google' | 'meta' | 'threads' | 'none';
 }
 
 const PLATFORMS: PlatformDef[] = [
@@ -60,6 +61,15 @@ const PLATFORMS: PlatformDef[] = [
     description: '發布 Reels 與貼文。透過 FB 粉專連動，與 Facebook 共用一次授權。',
     color: '#E4405F',
     connectKind: 'meta'
+  },
+  // v0.7.0：Threads — 獨立 OAuth（與 FB/IG 不共用）
+  {
+    platform: 'threads',
+    icon: IconBrandThreads,
+    name: 'Threads',
+    description: '發布純文字 / 圖片 / 影片貼文。Threads 走獨立 OAuth，需另外授權一次。',
+    color: '#000000',
+    connectKind: 'threads'
   }
 ];
 
@@ -182,7 +192,7 @@ function PlatformCard({
 
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountPublic[]>([]);
-  const [connecting, setConnecting] = useState<'google' | 'meta' | null>(null);
+  const [connecting, setConnecting] = useState<'google' | 'meta' | 'threads' | null>(null);
   const [loading, setLoading] = useState(true);
   const [testingId, setTestingId] = useState<number | null>(null);
 
@@ -245,6 +255,31 @@ export function AccountsPage() {
     } catch (e) {
       notifications.show({
         title: 'Meta 連線失敗',
+        message: (e as Error).message,
+        color: 'red',
+        icon: <IconAlertTriangle size={18} />
+      });
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  const handleConnectThreads = async () => {
+    setConnecting('threads');
+    try {
+      const result = await window.puffin.accounts.connectThreads();
+      notifications.show({
+        title: '已連線 Threads',
+        message: result.user.username
+          ? `@${result.user.username} 已成功授權`
+          : `${result.user.name ?? '帳號'} 已成功授權`,
+        color: 'mint',
+        icon: <IconCheck size={18} />
+      });
+      await refresh();
+    } catch (e) {
+      notifications.show({
+        title: 'Threads 連線失敗',
         message: (e as Error).message,
         color: 'red',
         icon: <IconAlertTriangle size={18} />
@@ -360,10 +395,13 @@ export function AccountsPage() {
               ? handleConnectGoogle
               : def.connectKind === 'meta'
                 ? handleConnectMeta
-                : () => {};
+                : def.connectKind === 'threads'
+                  ? handleConnectThreads
+                  : () => {};
           const isConnecting =
             (def.connectKind === 'google' && connecting === 'google') ||
-            (def.connectKind === 'meta' && connecting === 'meta');
+            (def.connectKind === 'meta' && connecting === 'meta') ||
+            (def.connectKind === 'threads' && connecting === 'threads');
           return (
             <PlatformCard
               key={def.platform}

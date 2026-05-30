@@ -227,9 +227,10 @@ export function registerSystemHandlers(): void {
   }> => {
     const current = app.getVersion();
     try {
-      const resp = await net.fetch('https://mememaker-tw.com/puffinpuff/version.json', {
-        cache: 'no-cache'
-      });
+      // 避免快取：cache-busting query string（Electron net.fetch RequestInit 不支援 cache 欄位）
+      const resp = await net.fetch(
+        `https://mememaker-tw.com/puffinpuff/version.json?t=${Math.floor(Date.now() / 60000)}`
+      );
       if (!resp.ok) {
         return { latest: current, current, newer: false };
       }

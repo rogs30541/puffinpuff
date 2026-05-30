@@ -25,7 +25,7 @@ import {
   Alert,
   Image as MantineImage
 } from '@mantine/core';
-import { DateTimePicker, DatePickerInput, TimeInput } from '@mantine/dates';
+import { DatePickerInput, TimeInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 import {
   IconFolder,

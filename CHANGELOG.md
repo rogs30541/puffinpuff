@@ -4,6 +4,68 @@
 
 ---
 
+## v0.7.0 — 2026-05-30 — 第 4 平台：Threads 接入
+
+### 🧵 新功能 — Threads 一鍵發布
+
+PuffinPuff 從「三平台一鍵發布」升級為「四平台一鍵發布」：
+
+| 平台 | 影片 | 圖片 | 純文字 | 多圖 |
+|------|------|------|--------|------|
+| YouTube Shorts | ✓ | ✗ | ✗ | ✗ |
+| Facebook | ✓ Reels | ✓ Photo | ✗ | ✓ Multi-photo |
+| Instagram | ✓ Reels | ✓ Post | ✗ | ✓ Carousel (2-10) |
+| **Threads** | **✓ Video** | **✓ Image** | **✓** | ⏳ v0.7.1 |
+
+### 🔧 技術細節
+
+**OAuth：獨立流程，與 FB/IG 不共用**
+- Threads 走獨立 OAuth：`threads.net/oauth/authorize` → `graph.threads.net/oauth/access_token`
+- 60 天長期 token（`th_exchange_token` grant_type）
+- 需在 Meta Developer Dashboard 啟用 Threads API + 設定 Redirect URI
+- 設定檔：`secrets/threads_oauth.json`（已產 stub，需填 app_id / app_secret）
+
+**API：container pattern（與 IG 類似但 endpoint 不同）**
+- POST `/{user-id}/threads` 建立 container → 輪詢 status → POST `/{user-id}/threads_publish`
+- VIDEO / IMAGE 走 Cloudflare tunnel 公開檔案（沿用既有 tunnel infra）
+- TEXT 模式直接 POST，無需 tunnel
+- 500 字硬上限，超過自動截短
+
+**主程式變更**
+- `src/main/oauth/threadsOAuth.ts`（新）— Threads OAuth flow
+- `src/main/adapters/threadsAdapter.ts`（新）— 三 media_type 統一上傳
+- `src/main/ipc/accountsHandlers.ts` — `accounts:connectThreads` / `cancelThreadsAuth`
+- `src/main/ipc/publishHandlers.ts` — `runThreads()` + dispatcher 加 threads 分支
+
+**型別變更**
+- `Platform`：已含 `'threads'`
+- `PublishContent.perPlatform.threads`：`PlatformOverride`
+- `PLATFORM_LIMITS.threads`：`{ title: 0, description: 500 }`
+- `PostTargetRecord.platform`、`PublishPlatformState.platform` 加 threads
+
+**UI 變更**
+- AccountsPage：加 Threads 卡片 + 連線按鈕
+- ContentEditor：加 Threads 平台 chip + Threads 分頁
+- HistoryPage / SchedulePage：加 Threads icon（`IconBrandThreads`）
+- PublishPage：透過 ContentEditor 自動接入
+
+### ⚠ 已知限制（v0.7.1 預計處理）
+
+- 批量匯入 UI 尚未加 Threads 平台選項（folderWatcher / bulk video / bulk image 都預設 threads.enabled=false）
+- Threads insights（觸及數據）回傳空值（需 `threads_manage_insights` 權限 + 額外 API 接入）
+- Threads 多圖 carousel API 尚未開放第三方，目前 carousel 模式只發第一張當 IMAGE
+- mediaProbe validateForPlatforms 不檢查 Threads 規格（Threads 規格較寬鬆，直接上傳）
+
+### 📋 使用前置作業（使用者需做）
+
+1. 在 Meta Developer Dashboard 既有的 PuffinPuff App 啟用 **Threads API**
+2. 設定 Threads Redirect URI：`https://localhost/puffinpuff-threads-callback`
+3. 取得 Threads app_id + app_secret（可能與既有 FB/IG 不同）
+4. 編輯 `secrets/threads_oauth.json` 填入真實值
+5. 加入 Threads tester（Dev mode 限制）
+
+---
+
 ## 🤖 自動 GitHub 推送機制（2026-05-29 設定）
 
 從現在起，**打包流程自動同步到 GitHub**：

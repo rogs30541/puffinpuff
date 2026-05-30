@@ -39,6 +39,11 @@ const api: PuffinAPI = {
     cancelGoogleAuth: () => ipcRenderer.invoke('accounts:cancelGoogleAuth') as Promise<boolean>,
     connectMeta: () => ipcRenderer.invoke('accounts:connectMeta') as Promise<MetaConnectResult>,
     cancelMetaAuth: () => ipcRenderer.invoke('accounts:cancelMetaAuth') as Promise<boolean>,
+    connectThreads: () => ipcRenderer.invoke('accounts:connectThreads') as Promise<{
+      user: { id: string; username?: string; name?: string };
+      threadsAccounts: AccountPublic[];
+    }>,
+    cancelThreadsAuth: () => ipcRenderer.invoke('accounts:cancelThreadsAuth') as Promise<boolean>,
     disconnect: (id) => ipcRenderer.invoke('accounts:disconnect', id) as Promise<boolean>,
     testConnection: (accountId: number) =>
       ipcRenderer.invoke('accounts:testConnection', accountId) as Promise<{
@@ -111,10 +116,10 @@ const api: PuffinAPI = {
       ipcRenderer.invoke('posts:saveDraft', args) as Promise<number>,
     delete: (id: number) =>
       ipcRenderer.invoke('posts:delete', id) as Promise<boolean>,
-    retryTarget: (postId: number, platform: 'youtube' | 'facebook' | 'instagram') =>
+    retryTarget: (postId: number, platform: 'youtube' | 'facebook' | 'instagram' | 'threads') =>
       ipcRenderer.invoke('posts:retryTarget', postId, platform) as Promise<string>,
     fetchStats: (postId: number) =>
-      ipcRenderer.invoke('posts:fetchStats', postId) as Promise<unknown>
+      ipcRenderer.invoke('posts:fetchStats', postId) as Promise<import('../shared/types').PostTargetRecord[]>
   },
 
   system: {

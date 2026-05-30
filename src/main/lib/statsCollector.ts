@@ -190,12 +190,16 @@ export async function fetchInstagramStats(accountId: number, mediaId: string): P
  * 通用：依平台分流取數據
  */
 export async function fetchStatsForTarget(
-  platform: 'youtube' | 'facebook' | 'instagram',
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads',
   accountId: number,
   remoteId: string
 ): Promise<PostStats> {
   if (platform === 'youtube') return fetchYouTubeStats(accountId, remoteId);
   if (platform === 'facebook') return fetchFacebookStats(accountId, remoteId);
   if (platform === 'instagram') return fetchInstagramStats(accountId, remoteId);
+  if (platform === 'threads') {
+    // v0.7.0：Threads insights 需 threads_manage_insights 權限 — 先回空值不擋發布
+    return { views: null, likesCount: null, commentsCount: null, sharesCount: null, reach: null };
+  }
   throw new Error(`不支援的平台：${platform}`);
 }

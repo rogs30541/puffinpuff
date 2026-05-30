@@ -29,7 +29,7 @@ interface PostRow {
 interface TargetRow {
   id: number;
   post_id: number;
-  platform: 'youtube' | 'facebook' | 'instagram';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
   account_id: number | null;
   account_name: string | null;
   status: TargetStatus;
@@ -184,7 +184,7 @@ export function updatePostStatus(
 
 export interface CreateTargetInput {
   postId: number;
-  platform: 'youtube' | 'facebook' | 'instagram';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
   accountId: number | null;
   accountName: string;
   status: TargetStatus;
@@ -201,7 +201,7 @@ export function createTarget(input: CreateTargetInput): number {
 
 export interface UpdateTargetInput {
   postId: number;
-  platform: 'youtube' | 'facebook' | 'instagram';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
   status: TargetStatus;
   remoteId?: string | null;
   remoteUrl?: string | null;
@@ -256,7 +256,7 @@ export function deletePost(id: number): void {
 /** v0.4.2：更新 target 的觸及數據 */
 export interface UpdateTargetStatsInput {
   postId: number;
-  platform: 'youtube' | 'facebook' | 'instagram';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
   views?: number | null;
   likesCount?: number | null;
   commentsCount?: number | null;

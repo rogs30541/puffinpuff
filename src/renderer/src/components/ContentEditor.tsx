@@ -21,6 +21,7 @@ import {
   IconBrandYoutube,
   IconBrandFacebook,
   IconBrandInstagram,
+  IconBrandThreads,
   IconUser
 } from '@tabler/icons-react';
 import {
@@ -31,7 +32,7 @@ import {
   type Privacy
 } from '../../../shared/types';
 
-type PlatformKey = 'youtube' | 'facebook' | 'instagram';
+type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads';
 
 interface ContentEditorProps {
   value?: PublishContent;
@@ -49,7 +50,9 @@ const PLATFORM_META: Record<
 > = {
   youtube: { name: 'YouTube', color: '#FF0000', supportsTitle: true, supportsPrivacy: true },
   facebook: { name: 'Facebook', color: '#1877F2', supportsTitle: false, supportsPrivacy: false },
-  instagram: { name: 'Instagram', color: '#E4405F', supportsTitle: false, supportsPrivacy: false }
+  instagram: { name: 'Instagram', color: '#E4405F', supportsTitle: false, supportsPrivacy: false },
+  // v0.7.0：Threads — 純文字社群、無標題、無隱私（一律公開）
+  threads: { name: 'Threads', color: '#000000', supportsTitle: false, supportsPrivacy: false }
 };
 
 interface PlatformChipProps {
@@ -299,6 +302,9 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
           <Tabs.Tab value="instagram" leftSection={<IconBrandInstagram size={16} color="#E4405F" />}>
             Instagram
           </Tabs.Tab>
+          <Tabs.Tab value="threads" leftSection={<IconBrandThreads size={16} color="#000000" />}>
+            Threads
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="common">
@@ -355,6 +361,7 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
         <Tabs.Panel value="youtube">{renderPlatformPanel('youtube')}</Tabs.Panel>
         <Tabs.Panel value="facebook">{renderPlatformPanel('facebook')}</Tabs.Panel>
         <Tabs.Panel value="instagram">{renderPlatformPanel('instagram')}</Tabs.Panel>
+        <Tabs.Panel value="threads">{renderPlatformPanel('threads')}</Tabs.Panel>
       </Tabs>
     </Card>
   );

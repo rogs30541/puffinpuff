@@ -54,7 +54,9 @@ function buildContent(watcher: WatchedFolder, fileName: string): PublishContent 
         ...DEFAULT_PUBLISH_CONTENT.perPlatform.instagram,
         enabled: t.platforms.includes('instagram'),
         ...(t.targetAccounts?.instagram ? { accountId: t.targetAccounts.instagram } : {})
-      }
+      },
+      // v0.7.0：folderWatcher 既有監聽器預設不啟 Threads（避免突然多發一平台）
+      threads: { ...DEFAULT_PUBLISH_CONTENT.perPlatform.threads, enabled: false }
     }
   };
 }

@@ -31,11 +31,12 @@ function buildContentFromRow(
   description: string,
   hashtags: string,
   privacy: 'public' | 'private',
-  platforms: ('youtube' | 'facebook' | 'instagram')[],
+  platforms: ('youtube' | 'facebook' | 'instagram' | 'threads')[],
   targetAccounts?: {
     youtube?: number;
     facebook?: number;
     instagram?: number;
+    threads?: number;
   }
 ): PublishContent {
   return {
@@ -55,6 +56,12 @@ function buildContentFromRow(
         ...DEFAULT_PUBLISH_CONTENT.perPlatform.instagram,
         enabled: platforms.includes('instagram'),
         ...(targetAccounts?.instagram ? { accountId: targetAccounts.instagram } : {})
+      },
+      // v0.7.0：Threads — 預設不啟用，需 bulk import UI 明確 opt-in
+      threads: {
+        ...DEFAULT_PUBLISH_CONTENT.perPlatform.threads,
+        enabled: platforms.includes('threads'),
+        ...(targetAccounts?.threads ? { accountId: targetAccounts.threads } : {})
       }
     }
   };
@@ -216,7 +223,9 @@ export function registerScheduleHandlers(): void {
               ...DEFAULT_PUBLISH_CONTENT.perPlatform.instagram,
               enabled: row.platforms.includes('instagram'),
               ...(row.targetAccounts?.instagram ? { accountId: row.targetAccounts.instagram } : {})
-            }
+            },
+            // v0.7.0：圖文 bulk 預設關 Threads（待後續版本加 UI）
+            threads: { ...DEFAULT_PUBLISH_CONTENT.perPlatform.threads, enabled: false }
           },
           // v0.3.2：carousel 多圖路徑
           ...(row.additionalImagePaths && row.additionalImagePaths.length > 0

@@ -13,6 +13,7 @@ import {
 } from '../lib/accountsRepo';
 import { cancelGoogleAuth, connectGoogleAccount } from '../oauth/googleOAuth';
 import { cancelMetaAuth, connectMetaAccount, type MetaConnectResult } from '../oauth/metaOAuth';
+import { cancelThreadsAuth, connectThreadsAccount, type ThreadsConnectResult } from '../oauth/threadsOAuth';
 import { parseMetaError } from '../lib/metaErrorHelpers';
 
 export interface AccountTestResult {
@@ -41,6 +42,16 @@ export function registerAccountsHandlers(): void {
 
   ipcMain.handle('accounts:cancelMetaAuth', (): boolean => {
     cancelMetaAuth();
+    return true;
+  });
+
+  // v0.7.0：Threads OAuth
+  ipcMain.handle('accounts:connectThreads', async (): Promise<ThreadsConnectResult> => {
+    return await connectThreadsAccount();
+  });
+
+  ipcMain.handle('accounts:cancelThreadsAuth', (): boolean => {
+    cancelThreadsAuth();
     return true;
   });
 

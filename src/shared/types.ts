@@ -83,6 +83,7 @@ export interface PublishContent {
     youtube: PlatformOverride;
     facebook: PlatformOverride;
     instagram: PlatformOverride;
+    threads: PlatformOverride;
   };
   /**
    * v0.3.2：carousel 第 2..N 張的路徑（圖文模式專屬）
@@ -163,14 +164,16 @@ export const DEFAULT_PUBLISH_CONTENT: PublishContent = {
   perPlatform: {
     youtube: { enabled: true },
     facebook: { enabled: true },
-    instagram: { enabled: true }
+    instagram: { enabled: true },
+    threads: { enabled: false } // v0.7.0：預設關閉，使用者連 Threads 帳號後再開
   }
 };
 
 export const PLATFORM_LIMITS = {
   youtube: { title: 100, description: 5000 },
   facebook: { title: 0, description: 63000 },
-  instagram: { title: 0, description: 2200 }
+  instagram: { title: 0, description: 2200 },
+  threads: { title: 0, description: 500 }
 } as const;
 
 export type NavTarget = 'publish' | 'schedule' | 'history' | 'accounts' | 'templates' | 'settings';
@@ -183,7 +186,7 @@ export type PublishPlatformStatus =
   | 'cancelled';
 
 export interface PublishPlatformState {
-  platform: 'youtube' | 'facebook' | 'instagram';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
   accountId: number;
   accountName: string;
   status: PublishPlatformStatus;
@@ -240,7 +243,7 @@ export type TargetStatus = 'pending' | 'success' | 'failed' | 'cancelled';
 
 export interface PostTargetRecord {
   id: number;
-  platform: 'youtube' | 'facebook' | 'instagram';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
   accountId: number | null;
   accountName: string;
   status: TargetStatus;
@@ -579,6 +582,12 @@ export interface PuffinAPI {
     cancelGoogleAuth(): Promise<boolean>;
     connectMeta(): Promise<MetaConnectResult>;
     cancelMetaAuth(): Promise<boolean>;
+    /** v0.7.0：Threads OAuth */
+    connectThreads(): Promise<{
+      user: { id: string; username?: string; name?: string };
+      threadsAccounts: AccountPublic[];
+    }>;
+    cancelThreadsAuth(): Promise<boolean>;
     disconnect(id: number): Promise<boolean>;
     /** v0.4.4：測試帳號連線（call 對應平台 API，回傳是否成功 + 延遲 + 訊息）*/
     testConnection(accountId: number): Promise<{
@@ -621,7 +630,7 @@ export interface PuffinAPI {
     saveDraft(args: SaveDraftArgs): Promise<number>;
     delete(id: number): Promise<boolean>;
     /** 對既有 post 的單一失敗平台重新發布 */
-    retryTarget(postId: number, platform: 'youtube' | 'facebook' | 'instagram'): Promise<string>;
+    retryTarget(postId: number, platform: 'youtube' | 'facebook' | 'instagram' | 'threads'): Promise<string>;
     /** v0.4.2：抓取此 post 所有 target 的觸及數據（views/likes/comments/reach）*/
     fetchStats(postId: number): Promise<import('./types').PostTargetRecord[]>;
   };

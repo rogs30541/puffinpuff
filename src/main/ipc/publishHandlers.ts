@@ -17,6 +17,7 @@ import {
   publishImagePost,
   publishCarouselPost
 } from '../adapters/instagramAdapter';
+import { uploadToThreads } from '../adapters/threadsAdapter';
 import { withRetry } from '../lib/retry';
 import { refreshUserTokenForAccount } from '../lib/metaTokenRefresher';
 import { isMetaAuthError } from '../lib/metaErrorHelpers';
@@ -60,7 +61,7 @@ import type {
   PublishStartArgs
 } from '../../shared/types';
 
-type PlatformKey = 'youtube' | 'facebook' | 'instagram';
+type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads';
 
 interface RunningJob {
   state: PublishJobState;
@@ -391,6 +392,67 @@ async function runInstagramImage(
   }
 }
 
+// v0.7.0：Threads — VIDEO / IMAGE / TEXT
+async function runThreads(
+  job: RunningJob,
+  filePath: string | null,
+  account: AccountPublic,
+  content: ReturnType<typeof effectiveContent>,
+  postType: 'video' | 'image' | 'carousel'
+): Promise<void> {
+  updatePlatform(job, 'threads', { status: 'uploading', percent: 0 });
+
+  // Threads 不支援 carousel（截至 v1.0，多圖貼文 API 尚未開放給第三方）
+  //   → carousel 模式下，只發第一張當 IMAGE，並在 description 提示
+  const text = [content.title, content.description, content.hashtags]
+    .filter(Boolean)
+    .join('\n\n');
+  const usingMedia = postType !== 'carousel' || filePath !== null;
+
+  try {
+    const result = await withRetry(
+      () => uploadToThreads(
+        {
+          accountId: account.id,
+          text,
+          videoPath: postType === 'video' && filePath ? filePath : undefined,
+          imagePath: (postType === 'image' || postType === 'carousel') && filePath ? filePath : undefined
+        },
+        (e) => {
+          if (job.cancelRequested) return;
+          updatePlatform(job, 'threads', {
+            percent: e.percent,
+            bytesUploaded: e.bytesUploaded,
+            totalBytes: e.totalBytes
+          });
+        }
+      ),
+      {
+        onRetry: (attempt, err, delay) => {
+          updatePlatform(job, 'threads', {
+            status: 'uploading',
+            percent: 0,
+            error: `重試 ${attempt}/3（${Math.round(delay / 1000)}s 後）：${err.message.slice(0, 80)}`
+          });
+        }
+      }
+    );
+    updatePlatform(job, 'threads', {
+      status: 'success',
+      percent: 100,
+      url: result.url
+    });
+    // 觸發未用變數警告壓制（usingMedia 暫保留給未來 TEXT-only 條件分支）
+    void usingMedia;
+  } catch (e) {
+    updatePlatform(job, 'threads', {
+      status: 'failed',
+      error: (e as Error).message
+    });
+    throw e;
+  }
+}
+
 function runUnimplemented(job: RunningJob, platform: PlatformKey): void {
   updatePlatform(job, platform, {
     status: 'failed',
@@ -438,9 +500,10 @@ function startPublishJob(
   const platformStates: PublishPlatformState[] = [];
 
   // v0.6.0：YT 只接 video；image / carousel 都排除 YT
+  // v0.7.0：Threads 三種 postType 都支援（TEXT/IMAGE/VIDEO）
   const candidatePlatforms = postType === 'video'
-    ? (['youtube', 'facebook', 'instagram'] as const)
-    : (['facebook', 'instagram'] as const);
+    ? (['youtube', 'facebook', 'instagram', 'threads'] as const)
+    : (['facebook', 'instagram', 'threads'] as const);
 
   // 為每個啟用平台選定要發布的帳號
   // 優先順序：override.accountId（使用者指定）> 該平台第一個連線帳號
@@ -633,6 +696,10 @@ function startPublishJob(
               igRun = runInstagramImage(job, uploadPath, account, content, undefined);
             }
             results.push(igRun.catch(() => { /* 內部已更新 */ }));
+          } else if (platform === 'threads') {
+            // v0.7.0：Threads — video / image / carousel 都走 runThreads
+            const thRun = runThreads(job, uploadPath, account, content, postType);
+            results.push(thRun.catch(() => { /* 內部已更新 */ }));
           } else {
             runUnimplemented(job, platform);
           }
@@ -713,7 +780,7 @@ export function republishExistingPost(
     const successfulPlatforms = new Set(
       post.targets.filter((t) => t.status === 'success').map((t) => t.platform)
     );
-    for (const p of ['youtube', 'facebook', 'instagram'] as const) {
+    for (const p of ['youtube', 'facebook', 'instagram', 'threads'] as const) {
       if (successfulPlatforms.has(p)) {
         fullContent.perPlatform[p].enabled = false;
       }
