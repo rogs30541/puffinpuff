@@ -4,6 +4,30 @@
 
 ---
 
+## v0.7.1 — 2026-05-30 — Threads OAuth 診斷 hotfix
+
+### 🔍 問題
+v0.7.0 部分使用者連 Threads 時，OAuth 視窗開了登入後就停在 threads.net 首頁，
+沒進到「Allow / Deny」同意頁，視窗關掉後 PuffinPuff 也沒任何反應 / toast。
+
+### 🩹 修正
+- **OAuth 視窗永遠開 DevTools**（不分 dev / packaged），方便看 Network tab
+- **獨立 session partition** — 每次重新登入，避免 Threads 既有 cookie 衝突
+- **監聽所有 navigation 事件** — will-redirect / will-navigate / did-navigate / did-redirect-navigation / did-navigate-in-page / did-fail-load 都有 handler
+- **卡住偵測** — 若視窗停在 threads.net 非 /oauth 頁面超過 5 秒，console 印 4 大可能原因
+- **詳細 log** — auth URL、每次 navigation、callback params 全部印到 main console
+- **明確錯誤訊息** — 視窗關閉時提示「若卡 threads.net 首頁 = Threads 拒絕了授權請求」
+
+### 📋 如何取得診斷 log
+
+1. 啟動 v0.7.1 安裝檔
+2. 設定頁 → 開 DevTools（v0.6.9 加的按鈕）
+3. 帳號頁 → Threads 卡片 → 連線
+4. 完成或取消後 → 切回 DevTools → Console tab → 把 `[threads-oauth]` 開頭的所有 log 複製貼給開發者
+5. 同時也看 OAuth 視窗自己的 DevTools Network tab 的 redirect chain
+
+---
+
 ## v0.7.0 — 2026-05-30 — 第 4 平台：Threads 接入
 
 ### 🧵 新功能 — Threads 一鍵發布
