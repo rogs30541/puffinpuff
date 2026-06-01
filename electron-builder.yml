@@ -20,10 +20,12 @@ extraResources:
     to: icon.ico
 
 # native module / 含 binary 的依賴必須解壓出 asar 才能執行
+# secrets：v0.7.2 起放 asar 外，方便使用者編輯而不用重打包
 asarUnpack:
   - node_modules/ffmpeg-static/**/*
   - node_modules/ffprobe-static/**/*
   - node_modules/sql.js/dist/**/*
+  - secrets/*.json
 
 win:
   target:

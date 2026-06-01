@@ -4,6 +4,23 @@
 
 ---
 
+## v0.7.2 — 2026-05-30 — Threads redirect URI 對齊 + secrets 改 asar.unpacked
+
+### 🔧 修正
+- **Threads redirect URI** 從 `https://localhost/...` 改成 `https://puffin-puffs.com/puffinpuff-threads-callback`
+  - Meta Dashboard 對 Threads API 拒絕 `localhost`，必須用公開可訪問的 HTTPS domain
+  - Redirect URI 只是個 OAuth 標記，Electron 在 `will-redirect` 時攔截，puffin-puffs.com 不會被實際訪問
+- **secrets/*.json 改 asar.unpacked**
+  - 之前 secrets 打進 asar 內，使用者改 credentials 必須重打包
+  - v0.7.2 起 secrets 放在 `resources/app.asar.unpacked/secrets/` 下，使用者可直接編輯 JSON
+
+### 📋 升級步驟
+1. 安裝 v0.7.2（自動覆蓋舊版）
+2. Threads 連線 — 應該會跳到「PuffinPuff v2 想要存取你的 Threads」同意頁
+3. 之後想換 Threads / FB / Google credentials → 編輯 `<安裝路徑>/resources/app.asar.unpacked/secrets/*.json` 即可，免重打包
+
+---
+
 ## v0.7.1 — 2026-05-30 — Threads OAuth 診斷 hotfix
 
 ### 🔍 問題
