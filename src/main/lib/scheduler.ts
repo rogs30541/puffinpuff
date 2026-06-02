@@ -11,7 +11,7 @@ import {
 } from './postsRepo';
 import { execute, flushDatabase } from './database';
 import { notifyScheduleFired, notifySimple } from './notifyService';
-import type { PublishContent, ScheduleArgs } from '../../shared/types';
+import { normalizePublishContent, type PublishContent, type ScheduleArgs } from '../../shared/types';
 
 interface ScheduledEntry {
   postId: number;
@@ -75,7 +75,8 @@ function fireScheduledPost(postId: number): void {
     return;
   }
 
-  const content: PublishContent = JSON.parse(post.contentJson);
+  // v0.7.3：normalize 舊 post（無 threads 欄）
+  const content: PublishContent = normalizePublishContent(JSON.parse(post.contentJson));
   triggerPublish({
     postId,
     filePath: post.filePath,

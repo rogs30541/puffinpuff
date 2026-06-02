@@ -52,13 +52,14 @@ import {
   updatePostStatus,
   updateTarget
 } from '../lib/postsRepo';
-import type {
-  CommonContent,
-  PlatformOverride,
-  PublishJobState,
-  PublishPlatformState,
-  PublishProgressEvent,
-  PublishStartArgs
+import {
+  normalizePublishContent,
+  type CommonContent,
+  type PlatformOverride,
+  type PublishJobState,
+  type PublishPlatformState,
+  type PublishProgressEvent,
+  type PublishStartArgs
 } from '../../shared/types';
 
 type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads';
@@ -469,6 +470,8 @@ function startPublishJob(
   webContents: Electron.WebContents,
   existingPostId?: number
 ): string {
+  // v0.7.3：所有外部呼叫進來都先 normalize（防舊資料 / 防 caller 漏帶 threads 欄）
+  args = { ...args, content: normalizePublishContent(args.content) };
   const jobId = newJobId();
 
   // v0.6.0：入口處自動偵測 mode（避免 caller 傳錯 postType 把圖檔送進 Reels API）
@@ -773,7 +776,8 @@ export function republishExistingPost(
     throw new Error('post 沒有檔案路徑或內容資料，無法重發');
   }
 
-  const fullContent = JSON.parse(post.contentJson);
+  // v0.7.3：normalize 補齊 perPlatform.threads（舊 post 沒這欄）
+  const fullContent = normalizePublishContent(JSON.parse(post.contentJson));
 
   if (mode === 'failedOnly') {
     // 把 success 的平台 enabled=false，避免重複發布

@@ -11,6 +11,38 @@ export const FEATURE_FLAGS = {
   THREADS_UI_ENABLED: false
 } as const;
 
+/**
+ * v0.7.3：把舊版（v0.7.0 之前）存的 PublishContent 補齊到當前完整 shape。
+ *
+ * 為什麼需要：v0.7.0 加 threads 平台後，舊 post 的 contentJson 沒有 threads 欄位。
+ * 任何下游 code（scheduler / republish / startPublishJob / editor）直接讀
+ * `content.perPlatform.threads.enabled` 會炸 `Cannot read properties of undefined`。
+ *
+ * 所有 JSON.parse(post.contentJson) 的地方都應該包這個 helper。
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function normalizePublishContent(raw: any): PublishContent {
+  const r = raw || {};
+  const common = r.common || {};
+  const pp = r.perPlatform || {};
+  const defaultOverride: PlatformOverride = { enabled: false };
+  return {
+    common: {
+      title: common.title ?? '',
+      description: common.description ?? '',
+      hashtags: common.hashtags ?? '',
+      privacy: common.privacy ?? 'public'
+    },
+    perPlatform: {
+      youtube: pp.youtube ?? defaultOverride,
+      facebook: pp.facebook ?? defaultOverride,
+      instagram: pp.instagram ?? defaultOverride,
+      threads: pp.threads ?? defaultOverride
+    },
+    ...(r.imageCarouselPaths ? { imageCarouselPaths: r.imageCarouselPaths } : {})
+  };
+}
+
 export interface AccountPublic {
   id: number;
   platform: Platform;

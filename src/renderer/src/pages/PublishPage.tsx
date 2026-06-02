@@ -37,7 +37,7 @@ import type {
   PublishJobState,
   VideoSpec
 } from '../../../shared/types';
-import { DEFAULT_PUBLISH_CONTENT, substituteTitleFilename } from '../../../shared/types';
+import { DEFAULT_PUBLISH_CONTENT, normalizePublishContent, substituteTitleFilename } from '../../../shared/types';
 import { ContentEditor } from '../components/ContentEditor';
 import { PublishProgress } from '../components/PublishProgress';
 import { TemplateApplyBar } from '../components/TemplateApplyBar';
@@ -177,7 +177,8 @@ export function PublishPage({ draftIdToLoad, onDraftLoaded }: PublishPageProps =
           return;
         }
         if (post.contentJson) {
-          setContent(JSON.parse(post.contentJson));
+          // v0.7.3：補齊舊 post 沒有的 threads 欄位，避免 ContentEditor 炸
+          setContent(normalizePublishContent(JSON.parse(post.contentJson)));
         }
         if (post.filePath) {
           setProbing(true);

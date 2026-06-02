@@ -4,6 +4,28 @@
 
 ---
 
+## v0.7.4 — 2026-06-02 — 修舊 post 重發炸 hotfix
+
+### 🐛 Bug
+重新發布 v0.7.0 之前存的舊 post 時，會跳：
+```
+TypeError: Cannot read properties of undefined (reading 'enabled')
+```
+原因：v0.7.0 加 threads 平台後，舊 post 的 `contentJson` 沒有 threads 欄位，
+直接讀 `content.perPlatform.threads.enabled` 就 undefined 炸。
+
+### 🩹 修法
+新增 `normalizePublishContent(raw)` helper（位於 `src/shared/types.ts`），
+所有解析 `contentJson` 的 code path 都套用：
+- `publishHandlers.republishExistingPost` — 重發
+- `publishHandlers.startPublishJob` 入口 — 防 caller 漏帶 threads
+- `scheduler.fireScheduledPost` — 排程觸發
+- `PublishPage` 草稿載回
+
+舊資料自動補預設值 `{ enabled: false }`，不影響原本 YouTube / FB / IG 的設定。
+
+---
+
 ## v0.7.3 — 2026-06-02 — 暫時關閉 Threads UI（保留底層 code）
 
 ### 🚧 暫時下架原因
