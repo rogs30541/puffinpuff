@@ -4,6 +4,26 @@
 
 ---
 
+## v0.7.3 — 2026-06-02 — 暫時關閉 Threads UI（保留底層 code）
+
+### 🚧 暫時下架原因
+Threads OAuth 在 Meta Dev mode 下卡關 — 登入後直接跳 threads.net 首頁，不顯示同意頁。
+排查路徑都試過（redirect URI 對齊、tester 加入、獨立 session、永遠開 DevTools），
+但 Meta 後台 propagation 未完成，無法在現階段穩定收 callback。
+為避免使用者按了卡住，先把 UI 入口關掉，等之後 Meta App 通過 review 再開。
+
+### 🔧 變更
+- 新增 `FEATURE_FLAGS.THREADS_UI_ENABLED = false`（位於 `src/shared/types.ts`）
+- AccountsPage：filter 掉 Threads 卡片（不顯示連線按鈕）
+- ContentEditor：filter 掉 Threads 平台 chip + Threads 編輯分頁
+- **底層保留**：`threadsAdapter.ts`、`threadsOAuth.ts`、IPC handlers、DB schema、secrets file 通通不動
+- 之後要重啟 Threads UI：把 `THREADS_UI_ENABLED` 翻 true 即可（一行改）
+
+### 沒動到的（既有 3 平台一鍵發布完全不受影響）
+- YouTube Shorts / Facebook Reels & Photo / Instagram Reels & Post & Carousel 全部正常
+
+---
+
 ## v0.7.2 — 2026-05-30 — Threads redirect URI 對齊 + secrets 改 asar.unpacked
 
 ### 🔧 修正

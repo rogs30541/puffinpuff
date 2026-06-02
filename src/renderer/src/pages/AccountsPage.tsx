@@ -26,7 +26,7 @@ import {
   IconInfoCircle,
   type Icon
 } from '@tabler/icons-react';
-import type { AccountPublic, Platform } from '../../../shared/types';
+import { FEATURE_FLAGS, type AccountPublic, type Platform } from '../../../shared/types';
 
 interface PlatformDef {
   platform: Platform;
@@ -388,7 +388,7 @@ export function AccountsPage() {
       </Alert>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-        {PLATFORMS.map((def) => {
+        {PLATFORMS.filter((def) => FEATURE_FLAGS.THREADS_UI_ENABLED || def.platform !== 'threads').map((def) => {
           const platformAccounts = accounts.filter((a) => a.platform === def.platform);
           const onConnect =
             def.connectKind === 'google'

@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react';
 import {
   DEFAULT_PUBLISH_CONTENT,
+  FEATURE_FLAGS,
   PLATFORM_LIMITS,
   type AccountPublic,
   type PublishContent,
@@ -277,14 +278,16 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
           </Text>
         </div>
         <Group gap={8}>
-          {(Object.keys(content.perPlatform) as PlatformKey[]).map((p) => (
-            <PlatformChip
-              key={p}
-              platform={p}
-              enabled={content.perPlatform[p].enabled}
-              onToggle={() => updatePlatform(p, { enabled: !content.perPlatform[p].enabled })}
-            />
-          ))}
+          {(Object.keys(content.perPlatform) as PlatformKey[])
+            .filter((p) => FEATURE_FLAGS.THREADS_UI_ENABLED || p !== 'threads')
+            .map((p) => (
+              <PlatformChip
+                key={p}
+                platform={p}
+                enabled={content.perPlatform[p].enabled}
+                onToggle={() => updatePlatform(p, { enabled: !content.perPlatform[p].enabled })}
+              />
+            ))}
         </Group>
       </Group>
 
@@ -302,9 +305,11 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
           <Tabs.Tab value="instagram" leftSection={<IconBrandInstagram size={16} color="#E4405F" />}>
             Instagram
           </Tabs.Tab>
-          <Tabs.Tab value="threads" leftSection={<IconBrandThreads size={16} color="#000000" />}>
-            Threads
-          </Tabs.Tab>
+          {FEATURE_FLAGS.THREADS_UI_ENABLED && (
+            <Tabs.Tab value="threads" leftSection={<IconBrandThreads size={16} color="#000000" />}>
+              Threads
+            </Tabs.Tab>
+          )}
         </Tabs.List>
 
         <Tabs.Panel value="common">
@@ -361,7 +366,9 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
         <Tabs.Panel value="youtube">{renderPlatformPanel('youtube')}</Tabs.Panel>
         <Tabs.Panel value="facebook">{renderPlatformPanel('facebook')}</Tabs.Panel>
         <Tabs.Panel value="instagram">{renderPlatformPanel('instagram')}</Tabs.Panel>
-        <Tabs.Panel value="threads">{renderPlatformPanel('threads')}</Tabs.Panel>
+        {FEATURE_FLAGS.THREADS_UI_ENABLED && (
+          <Tabs.Panel value="threads">{renderPlatformPanel('threads')}</Tabs.Panel>
+        )}
       </Tabs>
     </Card>
   );

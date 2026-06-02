@@ -1,5 +1,16 @@
 export type Platform = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok';
 
+/**
+ * v0.7.3 Feature flags — UI 顯露控制（底層 code 不動，純 UI 開關）
+ *
+ *  - THREADS_UI_ENABLED：Threads OAuth 在 Dev mode 仍卡在 Meta 端授權鏈
+ *    （登入後跳 threads.net 首頁、不出同意頁），暫時關閉 UI 入口避免使用者誤觸。
+ *    底層 adapter / IPC / DB schema 保留，未來 Meta App 通過 review 後翻 true 即可。
+ */
+export const FEATURE_FLAGS = {
+  THREADS_UI_ENABLED: false
+} as const;
+
 export interface AccountPublic {
   id: number;
   platform: Platform;
