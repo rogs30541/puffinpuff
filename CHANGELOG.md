@@ -4,6 +4,28 @@
 
 ---
 
+## v0.7.5 — 2026-06-02 — 修 port 33344 偶發占用 hotfix
+
+### 🐛 症狀
+連續上傳兩支影片時偶爾跳：
+```
+本機 port 33344 已被佔用，無法啟動 named tunnel 本機 server。
+```
+但隔一段時間重試就會成功 → 代表是**上次 tunnel 的 socket 還在 TIME_WAIT 狀態**沒釋放。
+
+### 🩹 修法
+- **close 時強制斷所有連線** — 用 Node 18.2+ 的 `server.closeAllConnections()`，
+  把上次 Cloudflare 邊緣節點留下的 keep-alive 連線一次全部 destroy，避免 socket lingering
+- **bind 失敗時自動 retry 3 次** — 退避時間 1.5 → 3 → 4.5 秒
+- **retry 過程即時回報** UI（status 訊息會顯示「port 33344 被前次連線佔用中，等 1.5 秒後重試...」）
+- **最終失敗時的錯誤訊息升級** — 明確說「等 30-60 秒會自動釋放」+ 3 個可選的根本解法
+
+### 影響
+- 連發 IG 不再卡 port 占用問題
+- Quick tunnel 路徑不受影響（用隨機 port，沒這個問題）
+
+---
+
 ## v0.7.4 — 2026-06-02 — 修舊 post 重發炸 hotfix
 
 ### 🐛 Bug

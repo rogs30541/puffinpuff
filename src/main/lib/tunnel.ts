@@ -481,7 +481,7 @@ async function serveViaQuickCloudflareTunnel(
  *
  * @param port - 0 表示隨機 port；其他值表示固定 port（named tunnel mode 用）
  */
-function createLocalFileServer(args: {
+function createLocalFileServerOnce(args: {
   filePath: string;
   exposedName: string;
   port: number;
@@ -536,16 +536,7 @@ function createLocalFileServer(args: {
     });
 
     server.on('error', (e: NodeJS.ErrnoException) => {
-      if (e.code === 'EADDRINUSE' && port !== 0) {
-        reject(
-          new Error(
-            `本機 port ${port} 已被佔用，無法啟動 named tunnel 本機 server。\n` +
-            `請關閉佔用該 port 的程式（可用 \`netstat -ano | findstr :${port}\` 查），或切回 quick tunnel 模式。`
-          )
-        );
-      } else {
-        reject(e);
-      }
+      reject(e);
     });
 
     server.listen(port, '127.0.0.1', () => {
@@ -554,10 +545,74 @@ function createLocalFileServer(args: {
       resolve({
         server,
         port: actualPort,
-        close: () => new Promise((res) => server.close(() => res()))
+        // v0.7.5：close 時強制斷所有連線，避免 socket lingering 在 TIME_WAIT 卡住下次 bind
+        close: () => new Promise((res) => {
+          try {
+            // Node 18.2+：把當下所有 socket 一次性 destroy
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const anyServer = server as any;
+            if (typeof anyServer.closeAllConnections === 'function') {
+              anyServer.closeAllConnections();
+            }
+          } catch {
+            /* noop */
+          }
+          server.close(() => res());
+        })
       });
     });
   });
+}
+
+/**
+ * v0.7.5：包裝 createLocalFileServerOnce — 遇到 EADDRINUSE 自動 retry。
+ *
+ * 原因：上一次 named tunnel 的 socket 可能還在 TIME_WAIT（Windows 平台特別常見）。
+ * 等個 1.5 / 3 / 4.5 秒讓 OS 釋放，再試一次。
+ *
+ * 若三次都失敗才丟原本的「port 被佔用」錯誤訊息。
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function createLocalFileServer(args: {
+  filePath: string;
+  exposedName: string;
+  port: number;
+  onStatus?: (msg: string) => void;
+}): Promise<{ server: Server; port: number; close: () => Promise<void> }> {
+  const MAX_RETRIES = 3;
+  const BACKOFF_MS = [1_500, 3_000, 4_500];
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await createLocalFileServerOnce(args);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      const isAddrInUse = err.code === 'EADDRINUSE' && args.port !== 0;
+      if (!isAddrInUse || attempt === MAX_RETRIES) {
+        if (isAddrInUse) {
+          throw new Error(
+            `本機 port ${args.port} 持續被佔用 ${MAX_RETRIES + 1} 次重試後仍無法綁定。\n` +
+            `\n` +
+            `這通常是上次 named tunnel 連線還在 TIME_WAIT 狀態，再等 30-60 秒應自動釋放。\n` +
+            `\n` +
+            `若一直無法解決，可：\n` +
+            `  1. 完全結束 PuffinPuff（含系統匣圖示右鍵 → 結束）再重開\n` +
+            `  2. 用 PowerShell 查佔用程式：netstat -ano | findstr :${args.port}\n` +
+            `  3. 切回 quick tunnel 模式（設定 → IG 隧道工具）`
+          );
+        }
+        throw err;
+      }
+      const delay = BACKOFF_MS[attempt];
+      console.warn(`[tunnel] port ${args.port} 被佔用，第 ${attempt + 1}/${MAX_RETRIES} 次重試，${delay}ms 後...`);
+      args.onStatus?.(`port ${args.port} 被前次連線佔用中，等 ${Math.round(delay / 1000)} 秒後重試（${attempt + 1}/${MAX_RETRIES}）...`);
+      await sleep(delay);
+    }
+  }
+  throw new Error('unreachable');
 }
 
 /**
@@ -635,10 +690,12 @@ async function serveViaNamedCloudflareTunnel(
   }
 
   // 1. 本機 HTTP server（固定 port，需要與 Cloudflare dashboard 設定的 service URL 對應）
+  //    v0.7.5：port 被佔用時自動 retry 3 次，且 onStatus 即時回報給 UI
   const fs = await createLocalFileServer({
     filePath,
     exposedName,
-    port: NAMED_TUNNEL_LOCAL_PORT
+    port: NAMED_TUNNEL_LOCAL_PORT,
+    onStatus
   });
 
   // 2. spawn cloudflared with token
