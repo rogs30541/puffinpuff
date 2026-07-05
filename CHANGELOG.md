@@ -4,6 +4,34 @@
 
 ---
 
+## v0.7.6 — 2026-06-02 — 修 IG 圖文發布「Only photo or video can be accepted」錯誤
+
+### 🐛 症狀
+發布圖文到 IG 時失敗，錯誤訊息：
+```
+IG create-image-container：Meta API 錯誤（type=OAuthException code=9004/2207052 HTTP 400）
+Only photo or video can be accepted as media type.
+```
+FB 圖文照樣成功，只有 IG 掛掉。
+
+### 🩹 修法
+Meta 從 v22.0+ 開始對 IG image container 強制要求明確傳 `media_type=IMAGE`；
+之前依賴 Meta 自動推斷 → 現在會被拒絕。
+
+補上兩處：
+- **單圖 image container**（`publishImagePost` 的 create-image-container 階段）
+- **Carousel 子容器**（`publishCarouselPost` 的 create-child-N 階段）
+
+Reels（`media_type=REELS`）與 CAROUSEL parent（`media_type=CAROUSEL`）本來就有傳，不受影響。
+
+### 影響
+- 單張 IG 圖文貼文 ✅ 修好
+- IG Carousel 多圖貼文 ✅ 順帶修好（同個 API 差異）
+- IG Reels 影片 ✅ 完全不受影響（本來就正確）
+- FB / YT 完全不受影響
+
+---
+
 ## v0.7.5 — 2026-06-02 — 修 port 33344 偶發占用 hotfix
 
 ### 🐛 症狀

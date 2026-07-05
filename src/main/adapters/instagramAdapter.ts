@@ -279,10 +279,12 @@ export async function publishImagePost(
     const mediaUrl = `https://graph.facebook.com/${apiVersion}/${igUserId}/media`;
     let creationId: string;
     try {
+      // v0.7.6：Meta v22+ 對 image container 開始強制要求明確傳 media_type=IMAGE，
+      //         之前不傳 → Meta 回 "Only photo or video can be accepted as media type"
+      //         （error code=9004/2207052）→ 現在補上必要參數
       const resp = await axios.post(mediaUrl, null, {
         params: {
-          // 注意：IG IMAGE post 不傳 media_type=IMAGE 也 OK（預設就是 IMAGE）
-          // 但保留以明確語意
+          media_type: 'IMAGE',
           image_url: tunnel.url,
           caption: caption.slice(0, 2200),
           access_token: accessToken
@@ -452,8 +454,10 @@ export async function publishCarouselPost(
 
       const childUrl = `https://graph.facebook.com/${apiVersion}/${igUserId}/media`;
       try {
+        // v0.7.6：carousel child 也補上 media_type=IMAGE，避免同一個 error
         const resp = await axios.post(childUrl, null, {
           params: {
+            media_type: 'IMAGE',
             image_url: tunnel.url,
             is_carousel_item: 'true',
             access_token: accessToken
