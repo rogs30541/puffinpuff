@@ -238,6 +238,8 @@ const api: PuffinAPI = {
       ipcRenderer.invoke('tunnel:testNamed', input) as Promise<{ ok: boolean; message: string }>,
     getNamedLocalPort: () =>
       ipcRenderer.invoke('tunnel:getNamedLocalPort') as Promise<number>,
+    setNamedLocalPort: (port: number) =>
+      ipcRenderer.invoke('tunnel:setNamedLocalPort', port) as Promise<number>,
     // v0.8.0：S3 相容物件儲存
     getS3Config: () =>
       ipcRenderer.invoke('tunnel:getS3Config') as Promise<S3ConfigPublic | null>,

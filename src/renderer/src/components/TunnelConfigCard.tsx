@@ -673,6 +673,44 @@ export function TunnelConfigCard(): JSX.Element {
             autoComplete="off"
           />
 
+          {/* v0.8.1：port 可設定化 */}
+          <Group align="flex-end" gap="xs">
+            <TextInput
+              label="本機 Port"
+              description={`必須與 Cloudflare ingress 的 Service URL 一致（localhost:${localPort}）。預設 33344，被其他程式佔走時才需要改。`}
+              value={String(localPort)}
+              onChange={(e) => {
+                const n = parseInt(e.currentTarget.value, 10);
+                if (Number.isInteger(n)) setLocalPort(n);
+              }}
+              style={{ flex: 1 }}
+              autoComplete="off"
+            />
+            <Button
+              variant="light"
+              color="walnut"
+              size="xs"
+              mb={4}
+              onClick={async () => {
+                try {
+                  const saved = await window.puffin.tunnel.setNamedLocalPort(localPort);
+                  setLocalPort(saved);
+                  notifications.show({
+                    title: `本機 port 已改為 ${saved}`,
+                    message: '⚠ 記得同步修改 Cloudflare dashboard 的 Service URL，否則 tunnel 會抓不到檔案',
+                    color: 'mango',
+                    autoClose: 10_000,
+                    icon: <IconAlertTriangle size={18} />
+                  });
+                } catch (e) {
+                  notifications.show({ title: 'port 儲存失敗', message: (e as Error).message, color: 'red' });
+                }
+              }}
+            >
+              儲存 port
+            </Button>
+          </Group>
+
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <Button

@@ -11,7 +11,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
-import { getTunnelMode } from './settingsRepo';
+import { getTunnelMode, getNamedTunnelLocalPort } from './settingsRepo';
 import { getTunnelConfigInternal } from './tunnelConfigRepo';
 
 // v0.5.0：named tunnel mode 使用固定 port（與 Cloudflare dashboard ingress 設定對應）
@@ -641,7 +641,9 @@ async function ensureNamedSingleton(
       '請至「設定 → 媒體發布通道」填入 Cloudflare token + hostname，或改用其他通道模式。'
     );
   }
-  const configSig = `${config.token.slice(0, 16)}|${config.publicHostname}`;
+  // v0.8.1：port 可設定化 — port 也算進簽章，改 port 會自動重建 singleton
+  const localPort = getNamedTunnelLocalPort();
+  const configSig = `${config.token.slice(0, 16)}|${config.publicHostname}|${localPort}`;
 
   // 既有 singleton 還活著且設定沒變 → 直接用
   if (
@@ -664,7 +666,7 @@ async function ensureNamedSingleton(
 
   namedSingletonInit = (async (): Promise<NamedTunnelSingleton> => {
     const registry = new Map<string, RegistryEntry>();
-    const server = await startRegistryServerWithRetry(NAMED_TUNNEL_LOCAL_PORT, registry, onStatus);
+    const server = await startRegistryServerWithRetry(localPort, registry, onStatus);
 
     const bin = await ensureCloudflared(onStatus);
     onStatus?.('啟動 Cloudflare named tunnel（常駐）...');

@@ -787,6 +787,8 @@ export interface PuffinAPI {
     deleteNamedConfig(): Promise<boolean>;
     testNamed(input: { token: string; publicHostname: string }): Promise<{ ok: boolean; message: string }>;
     getNamedLocalPort(): Promise<number>;
+    /** v0.8.1：改 named tunnel 本機 port（需與 Cloudflare ingress 的 Service URL 一致）*/
+    setNamedLocalPort(port: number): Promise<number>;
     /** v0.8.0：S3 相容物件儲存（R2/S3/B2/MinIO）*/
     getS3Config(): Promise<S3ConfigPublic | null>;
     saveS3Config(input: SaveS3ConfigInput): Promise<S3ConfigPublic>;

@@ -4,6 +4,25 @@
 
 ---
 
+## v0.8.1 — 2026-07-19 — Named Tunnel 本機 port 可設定化
+
+### 🎯 目的
+保障「本機發布」路線的長期可用性：v0.8.0 singleton 已根治 TIME_WAIT 佔用，
+但若 port 33344 被**其他程式**長期佔走，過去只能改 code。現在 port 開放使用者設定。
+
+### 為什麼不是「多 port 輪替」？
+- singleton 架構下 port 只 bind 一次、永不釋放重綁 → 沒有「搶 port」動作，輪替要解的問題不存在
+- Cloudflare ingress 固定指向一個 port（`localhost:33344`），輪替到別的 port，
+  Cloudflare 流量還是導去舊 port → 抓不到檔案。多 port 需要多條 ingress 規則，複雜度高但無收益
+
+### 🔧 變更
+- 設定頁 Named Tunnel 區新增「本機 Port」欄位（預設 33344，範圍 1024-65535）
+- 改 port 時提醒同步修改 Cloudflare dashboard 的 Service URL
+- port 變更會自動重建常駐 singleton
+- 新 IPC：`tunnel:setNamedLocalPort`；`tunnel:getNamedLocalPort` 改回傳設定值
+
+---
+
 ## v0.8.0 — 2026-07-19 — 媒體通道抽象化（開源商用版基礎）
 
 ### 🎯 目標

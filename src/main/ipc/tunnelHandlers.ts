@@ -5,6 +5,8 @@ import { ipcMain } from 'electron';
 import {
   getTunnelMode,
   setTunnelMode,
+  getNamedTunnelLocalPort,
+  setNamedTunnelLocalPort,
   type TunnelMode
 } from '../lib/settingsRepo';
 import {
@@ -15,7 +17,7 @@ import {
   markTunnelConfigVerified,
   type TunnelConfigPublic
 } from '../lib/tunnelConfigRepo';
-import { testNamedTunnelConnection, NAMED_TUNNEL_LOCAL_PORT, shutdownNamedTunnelSingleton } from '../lib/tunnel';
+import { testNamedTunnelConnection, shutdownNamedTunnelSingleton } from '../lib/tunnel';
 import {
   getS3ConfigInternal,
   getS3ConfigPublic,
@@ -96,9 +98,20 @@ export function registerTunnelHandlers(): void {
     }
   );
 
+  // v0.8.1：port 可設定化 — 回傳設定值（預設仍是 NAMED_TUNNEL_LOCAL_PORT=33344）
   ipcMain.handle(
     'tunnel:getNamedLocalPort',
-    (): number => NAMED_TUNNEL_LOCAL_PORT
+    (): number => getNamedTunnelLocalPort()
+  );
+
+  ipcMain.handle(
+    'tunnel:setNamedLocalPort',
+    (_e, port: number): number => {
+      const saved = setNamedTunnelLocalPort(port);
+      // port 變更 → 關掉常駐 singleton，下次上傳用新 port 重建
+      void shutdownNamedTunnelSingleton().catch(() => {});
+      return saved;
+    }
   );
 
   // ===== v0.8.0：S3 相容物件儲存 =====
