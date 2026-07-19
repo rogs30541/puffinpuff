@@ -7,10 +7,12 @@ directories:
   buildResources: build
 
 # 哪些檔案要進 asar / 安裝包
+# v0.9.1：secrets 不再 bundle 進安裝檔（安全 — 公開發布的安裝檔曾外洩 app_secret）
+#         憑證改由使用者在「設定 → OAuth 憑證」貼入（DPAPI 加密存 DB）；
+#         dev 模式仍讀專案 secrets/ 資料夾（app.getAppPath() = 專案根目錄）
 files:
   - out/**/*
   - package.json
-  - secrets/*.json  # OAuth credentials（V1 個人版，bundled）
 
 # 額外資源（不進 asar，直接放在 resources/ 下，runtime 可讀）
 extraResources:
@@ -20,12 +22,10 @@ extraResources:
     to: icon.ico
 
 # native module / 含 binary 的依賴必須解壓出 asar 才能執行
-# secrets：v0.7.2 起放 asar 外，方便使用者編輯而不用重打包
 asarUnpack:
   - node_modules/ffmpeg-static/**/*
   - node_modules/ffprobe-static/**/*
   - node_modules/sql.js/dist/**/*
-  - secrets/*.json
 
 win:
   target:

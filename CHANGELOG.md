@@ -4,6 +4,36 @@
 
 ---
 
+## v0.9.1 — 2026-07-19 — 安裝檔不再 bundle secrets（安全修正）
+
+### 🔒 安全事件與處置
+- **事件**：repo 公開後，GitHub Releases 的安裝檔（v0.6.9-v0.9.0）含 `secrets/*.json`
+  （meta / threads app_secret 可被任何下載者讀取）
+- **處置**：
+  1. 已刪除全部 11 個公開 Release 的安裝檔資產（tag + 原始碼保留；git history 無 secret 實值）
+  2. v0.9.1 起 electron-builder **不再把 secrets 打進安裝檔**
+  3. app_secret 旋轉由使用者至 Meta Dashboard 執行（見升級步驟）
+
+### 🔧 變更
+- `electron-builder.yml`：`files` 與 `asarUnpack` 移除 `secrets/*.json`
+- 憑證來源（v0.9.0 架構不變）：
+  - 打包版：設定頁「OAuth 憑證」貼入 → DPAPI 加密存 DB
+  - dev 模式：仍讀專案 `secrets/` 資料夾（自動匯入 DB）
+
+### 📋 升級步驟（既有使用者）
+1. （建議先做）Meta Dashboard 旋轉 app_secret：App Settings → Basic → Reset App Secret；
+   Threads 設定頁同樣 Reset
+2. 安裝 v0.9.1（覆蓋安裝 — **AppData 資料不受影響**：帳號連線、排程、歷史、範本、通道設定全保留）
+3. 開啟設定頁 → 「OAuth 憑證（自帶 App）」→ 三個 provider 各貼一次新的 credentials JSON
+4. 之後所有機器都用同樣流程；安裝檔本身乾淨無機密
+
+### 資料保全說明
+- 使用者資料（DB / 快取）位於 `%APPDATA%\海鸚泡芙 PuffinPuff\`，安裝 / 升級 / 移除都不會刪除
+  （NSIS `deleteAppDataOnUninstall: false`）
+- 憑證 / token 均以 Windows DPAPI 加密，僅本機本使用者可解密
+
+---
+
 ## v0.9.0 — 2026-07-19 — OAuth 憑證自帶（開源商用版第二塊拼圖）
 
 ### 🎯 目標
