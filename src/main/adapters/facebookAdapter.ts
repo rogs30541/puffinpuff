@@ -1,12 +1,11 @@
-import { app } from 'electron';
 import { readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import axios, { AxiosError } from 'axios';
 import {
   getAccountById,
   getDecryptedAccessToken
 } from '../lib/accountsRepo';
 import { parseMetaError } from '../lib/metaErrorHelpers';
+import { loadCredentialsJson } from '../lib/credentialsStore';
 import type { UploadProgressEvent } from './youtubeAdapter';
 
 interface MetaCredentials {
@@ -14,9 +13,8 @@ interface MetaCredentials {
 }
 
 function loadCredentials(): MetaCredentials {
-  const path = join(app.getAppPath(), 'secrets', 'meta_oauth.json');
-  const raw = readFileSync(path, 'utf-8');
-  return JSON.parse(raw) as MetaCredentials;
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('meta') as MetaCredentials;
 }
 
 export interface FacebookUploadArgs {

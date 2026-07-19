@@ -12,12 +12,11 @@
  *  - threads_content_publish（寫）
  *  - threads_manage_insights（可選，抓觸及數據用）
  */
-import { app, BrowserWindow, session } from 'electron';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { BrowserWindow, session } from 'electron';
 import { randomBytes } from 'node:crypto';
 import axios from 'axios';
 import { upsertAccount, type AccountPublic } from '../lib/accountsRepo';
+import { loadCredentialsJson } from '../lib/credentialsStore';
 
 interface ThreadsCredentials {
   app_id: string;
@@ -48,9 +47,8 @@ interface ThreadsMeResponse {
 let activeAuthWindow: BrowserWindow | null = null;
 
 function loadCredentials(): ThreadsCredentials {
-  const path = join(app.getAppPath(), 'secrets', 'threads_oauth.json');
-  const raw = readFileSync(path, 'utf-8');
-  return JSON.parse(raw) as ThreadsCredentials;
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('threads') as ThreadsCredentials;
 }
 
 function buildAuthUrl(creds: ThreadsCredentials, state: string): string {

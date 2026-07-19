@@ -12,13 +12,12 @@
  *  - VIDEO：video_url + text
  *  - CAROUSEL：children=<container_id1,...> + text
  */
-import { app } from 'electron';
-import { readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { statSync } from 'node:fs';
 import axios, { AxiosError } from 'axios';
 import { getAccountById, getDecryptedAccessToken } from '../lib/accountsRepo';
 import { serveFileViaCloudflareTunnel } from '../lib/tunnel';
 import { parseMetaError } from '../lib/metaErrorHelpers';
+import { loadCredentialsJson } from '../lib/credentialsStore';
 import type { UploadProgressEvent } from './youtubeAdapter';
 
 interface ThreadsCredentials {
@@ -26,9 +25,8 @@ interface ThreadsCredentials {
 }
 
 function loadCredentials(): ThreadsCredentials {
-  const path = join(app.getAppPath(), 'secrets', 'threads_oauth.json');
-  const raw = readFileSync(path, 'utf-8');
-  return JSON.parse(raw) as ThreadsCredentials;
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('threads') as ThreadsCredentials;
 }
 
 export interface ThreadsUploadArgs {

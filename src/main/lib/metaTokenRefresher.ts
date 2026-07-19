@@ -10,9 +10,6 @@
  * - 失敗 → 寫入 last_refresh_error + 跳系統通知「請手動到帳號頁重連」
  */
 
-import { app } from 'electron';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import axios, { AxiosError } from 'axios';
 import {
   listAllMetaUserTokens,
@@ -23,6 +20,7 @@ import {
   type MetaUserTokenPublic
 } from './metaUserTokens';
 import { upsertAccount, getAccountById } from './accountsRepo';
+import { loadCredentialsJson } from './credentialsStore';
 import { notifySimple } from './notifyService';
 
 interface MetaCredentials {
@@ -56,9 +54,8 @@ const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 每 24 小時檢查一次
 let refreshTimer: NodeJS.Timeout | null = null;
 
 function loadCredentials(): MetaCredentials {
-  const path = join(app.getAppPath(), 'secrets', 'meta_oauth.json');
-  const raw = readFileSync(path, 'utf-8');
-  return JSON.parse(raw) as MetaCredentials;
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('meta') as MetaCredentials;
 }
 
 async function exchangeForLongLived(

@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import type { GcResult, MetaTokenRefreshResult, MetaUserTokenInfo } from '../../../shared/types';
 import { TunnelConfigCard } from '../components/TunnelConfigCard';
+import { CredentialsCard } from '../components/CredentialsCard';
 
 interface SystemStats {
   thumbnailCount: number;
@@ -646,6 +647,8 @@ export function SettingsPage() {
       </Card>
 
       {/* === v0.5.0：IG 隧道工具（含 Named Tunnel 設定）=== */}
+      <CredentialsCard />
+
       <TunnelConfigCard />
 
       {/* === v0.6.9：DevTools 開關 === */}

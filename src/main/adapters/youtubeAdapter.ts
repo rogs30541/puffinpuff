@@ -1,6 +1,4 @@
-import { app } from 'electron';
-import { readFileSync, statSync, createReadStream } from 'node:fs';
-import { join } from 'node:path';
+import { statSync, createReadStream } from 'node:fs';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import {
@@ -9,6 +7,7 @@ import {
   getDecryptedRefreshToken,
   upsertAccount
 } from '../lib/accountsRepo';
+import { loadCredentialsJson } from '../lib/credentialsStore';
 
 interface GoogleCredentials {
   installed: {
@@ -18,9 +17,8 @@ interface GoogleCredentials {
 }
 
 function loadCredentials(): GoogleCredentials {
-  const path = join(app.getAppPath(), 'secrets', 'google_oauth.json');
-  const raw = readFileSync(path, 'utf-8');
-  return JSON.parse(raw) as GoogleCredentials;
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('google') as GoogleCredentials;
 }
 
 function buildOAuthClient(accountId: number): OAuth2Client {

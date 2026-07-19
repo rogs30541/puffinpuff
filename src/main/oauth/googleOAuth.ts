@@ -1,11 +1,10 @@
-import { app, shell } from 'electron';
+import { shell } from 'electron';
 import { createServer, type Server } from 'node:http';
 import { AddressInfo } from 'node:net';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { upsertAccount, type AccountPublic } from '../lib/accountsRepo';
+import { loadCredentialsJson } from '../lib/credentialsStore';
 
 interface GoogleCredentials {
   installed: {
@@ -23,9 +22,8 @@ const SCOPES = [
 let activeServer: Server | null = null;
 
 function loadCredentials(): GoogleCredentials {
-  const path = join(app.getAppPath(), 'secrets', 'google_oauth.json');
-  const raw = readFileSync(path, 'utf-8');
-  return JSON.parse(raw) as GoogleCredentials;
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('google') as GoogleCredentials;
 }
 
 function htmlResponse(title: string, body: string): string {

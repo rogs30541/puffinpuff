@@ -27,6 +27,7 @@ import { runCacheGc } from './lib/cacheGc';
 import { startMetaTokenRefreshSchedule, stopMetaTokenRefreshSchedule } from './lib/metaTokenRefresher';
 import { registerWatchersHandlers } from './ipc/watchersHandlers';
 import { registerTunnelHandlers } from './ipc/tunnelHandlers';
+import { registerCredentialsHandlers } from './ipc/credentialsHandlers';
 import { registerTemplatesHandlers } from './ipc/templatesHandlers';
 import { startAllWatchers, stopAllWatchers } from './lib/folderWatcher';
 import { existsSync as fsExistsSync, writeFileSync as fsWriteFileSync } from 'node:fs';
@@ -301,6 +302,7 @@ app.whenReady().then(async () => {
   registerSystemHandlers();
   registerWatchersHandlers();
   registerTunnelHandlers();
+  registerCredentialsHandlers();
   registerTemplatesHandlers();
 
   bootstrapSchedulesFromDB();

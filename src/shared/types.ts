@@ -617,6 +617,17 @@ export interface S3ConfigPublic {
   lastError: string | null;
 }
 
+/** v0.9.0：OAuth 憑證自帶 */
+export type CredentialProvider = 'google' | 'meta' | 'threads';
+
+export interface CredentialStatus {
+  provider: CredentialProvider;
+  configured: boolean;
+  source: 'db' | 'file' | null;
+  summary: string | null;
+  updatedAt: number | null;
+}
+
 export interface SaveS3ConfigInput {
   endpoint: string;
   bucket: string;
@@ -794,6 +805,12 @@ export interface PuffinAPI {
     saveS3Config(input: SaveS3ConfigInput): Promise<S3ConfigPublic>;
     deleteS3Config(): Promise<boolean>;
     testS3(input: SaveS3ConfigInput): Promise<{ ok: boolean; message: string }>;
+  };
+  /** v0.9.0：OAuth 憑證自帶（開源商用版）*/
+  credentials: {
+    getStatus(): Promise<CredentialStatus[]>;
+    save(provider: CredentialProvider, jsonText: string): Promise<CredentialStatus>;
+    delete(provider: CredentialProvider): Promise<CredentialStatus>;
   };
   schedule: {
     /** 排程單一發布；回傳 post id */

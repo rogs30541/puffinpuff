@@ -4,6 +4,41 @@
 
 ---
 
+## v0.9.0 — 2026-07-19 — OAuth 憑證自帶（開源商用版第二塊拼圖）
+
+### 🎯 目標
+使用者自行提供 Google / Meta / Threads App credentials，
+不再依賴開發者 bundle 的 `secrets/*.json`。開源使用者 clone 下來就能建置可用版本。
+
+### 🔑 三層憑證來源（新架構）
+```
+1. DB oauth_credentials 表（使用者在設定頁貼的，DPAPI 加密）← 最優先
+2. secrets/*.json 檔案（開發者本機 build 的 fallback）
+   — 首次讀到時自動匯入 DB（一次性遷移）
+3. 都沒有 → 友善錯誤指引到設定頁
+```
+
+### 🔧 變更
+- **DB schema v12**：`oauth_credentials` 表（provider PK、encrypted_json DPAPI 加密）
+- **新檔** `src/main/lib/credentialsStore.ts` — 中央憑證存取層 + 欄位驗證 + 遮罩摘要
+- **重構 10 檔 13 個呼叫點**：googleOAuth / metaOAuth / threadsOAuth /
+  youtubeAdapter / facebookAdapter / instagramAdapter / threadsAdapter /
+  accountsHandlers / metaTokenRefresher / statsCollector — 全部改走 credentialsStore
+- **新 IPC**：`credentials:getStatus / save / delete`
+- **新 UI**：設定頁「OAuth 憑證（自帶 App）」卡片
+  - 三區塊（Google / Meta / Threads），顯示設定狀態與來源（使用者提供 / 內建檔案）
+  - 內嵌申請教學（Google Cloud Console / Meta Developer Dashboard 步驟）+ 貼 JSON 表單
+  - 憑證僅存本機（DPAPI 加密），不上傳任何伺服器
+
+### 📋 對現有使用者
+- 完全無感 — secrets 檔案還在，首次啟動自動匯入 DB，之後 DB 優先
+- 對開源使用者：clone → build（無 secrets 也能 build）→ 啟動後設定頁貼自己的 App credentials
+
+### 規劃文件
+`docs/v0.9.0_OAuth憑證自帶規劃.md`
+
+---
+
 ## v0.8.1 — 2026-07-19 — Named Tunnel 本機 port 可設定化
 
 ### 🎯 目的

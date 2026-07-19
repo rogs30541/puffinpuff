@@ -1,7 +1,5 @@
-import { app, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 import axios from 'axios';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { google } from 'googleapis';
 import {
   deleteAccount,
@@ -15,6 +13,7 @@ import { cancelGoogleAuth, connectGoogleAccount } from '../oauth/googleOAuth';
 import { cancelMetaAuth, connectMetaAccount, type MetaConnectResult } from '../oauth/metaOAuth';
 import { cancelThreadsAuth, connectThreadsAccount, type ThreadsConnectResult } from '../oauth/threadsOAuth';
 import { parseMetaError } from '../lib/metaErrorHelpers';
+import { loadCredentialsJson } from '../lib/credentialsStore';
 
 export interface AccountTestResult {
   ok: boolean;
@@ -73,8 +72,8 @@ export function registerAccountsHandlers(): void {
         return { ok: false, message: 'Token 不存在' };
       }
       try {
-        const path = join(app.getAppPath(), 'secrets', 'meta_oauth.json');
-        const creds = JSON.parse(readFileSync(path, 'utf-8')) as {
+        // v0.9.0：走中央憑證層
+        const creds = loadCredentialsJson('meta') as {
           app_id: string;
           app_secret: string;
           api_version: string;
@@ -110,8 +109,7 @@ export function registerAccountsHandlers(): void {
           const accessToken = getDecryptedAccessToken(accountId);
           const refreshToken = getDecryptedRefreshToken(accountId);
           if (!accessToken) throw new Error('access token 不存在');
-          const credsPath = join(app.getAppPath(), 'secrets', 'google_oauth.json');
-          const creds = JSON.parse(readFileSync(credsPath, 'utf-8')) as {
+          const creds = loadCredentialsJson('google') as {
             installed: { client_id: string; client_secret: string };
           };
           const oauth2Client = new google.auth.OAuth2(
@@ -135,8 +133,7 @@ export function registerAccountsHandlers(): void {
         if (account.platform === 'facebook' || account.platform === 'instagram') {
           const accessToken = getDecryptedAccessToken(accountId);
           if (!accessToken) throw new Error('token 不存在');
-          const credsPath = join(app.getAppPath(), 'secrets', 'meta_oauth.json');
-          const creds = JSON.parse(readFileSync(credsPath, 'utf-8')) as {
+          const creds = loadCredentialsJson('meta') as {
             api_version: string;
           };
           const externalId = account.externalId;

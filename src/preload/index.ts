@@ -3,6 +3,8 @@ import type {
   AccountPublic,
   BulkScheduleRow,
   ContentTemplate,
+  CredentialProvider,
+  CredentialStatus,
   CreateTemplateInput,
   CreateWatchedFolderInput,
   FolderScanResult,
@@ -249,6 +251,16 @@ const api: PuffinAPI = {
       ipcRenderer.invoke('tunnel:deleteS3Config') as Promise<boolean>,
     testS3: (input: SaveS3ConfigInput) =>
       ipcRenderer.invoke('tunnel:testS3', input) as Promise<{ ok: boolean; message: string }>
+  },
+
+  // v0.9.0：OAuth 憑證自帶
+  credentials: {
+    getStatus: () =>
+      ipcRenderer.invoke('credentials:getStatus') as Promise<CredentialStatus[]>,
+    save: (provider: CredentialProvider, jsonText: string) =>
+      ipcRenderer.invoke('credentials:save', provider, jsonText) as Promise<CredentialStatus>,
+    delete: (provider: CredentialProvider) =>
+      ipcRenderer.invoke('credentials:delete', provider) as Promise<CredentialStatus>
   }
 };
 

@@ -337,6 +337,22 @@ function applySchema(database: Database): void {
       Date.now()
     ]);
   }
+
+  if (currentVersion < 12) {
+    // v12：v0.9.0 OAuth 憑證自帶 — 使用者提供的 App credentials（DPAPI 加密）
+    //   provider：'google' | 'meta' | 'threads'
+    database.run(`
+      CREATE TABLE IF NOT EXISTS oauth_credentials (
+        provider TEXT PRIMARY KEY,
+        encrypted_json BLOB NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `);
+    execute('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)', [
+      12,
+      Date.now()
+    ]);
+  }
 }
 
 export function getDatabase(): Database {

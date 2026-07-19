@@ -9,11 +9,9 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import { app } from 'electron';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { google } from 'googleapis';
 import { getAccountById, getDecryptedAccessToken, getDecryptedRefreshToken } from './accountsRepo';
+import { loadCredentialsJson } from './credentialsStore';
 
 export interface PostStats {
   views: number | null;
@@ -32,11 +30,12 @@ interface MetaCredentials {
 }
 
 function loadGoogleCreds(): GoogleCredentials {
-  return JSON.parse(readFileSync(join(app.getAppPath(), 'secrets', 'google_oauth.json'), 'utf-8'));
+  // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
+  return loadCredentialsJson('google') as GoogleCredentials;
 }
 
 function loadMetaCreds(): MetaCredentials {
-  return JSON.parse(readFileSync(join(app.getAppPath(), 'secrets', 'meta_oauth.json'), 'utf-8'));
+  return loadCredentialsJson('meta') as MetaCredentials;
 }
 
 /** YouTube 數據（用 OAuth2 access token call YT Data API） */
