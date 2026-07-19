@@ -4,6 +4,57 @@
 
 ---
 
+## v0.8.0 — 2026-07-19 — 媒體通道抽象化（開源商用版基礎）
+
+### 🎯 目標
+根治高頻發布的 port 佔用與 cloudflared 通道不穩問題，並為開源商用版鋪路：
+讓使用者自行選擇並設定自有發布通道。
+
+### ☁️ 新功能一：雲端物件儲存通道（S3 相容，推薦）
+
+IG / Threads 需要通道的唯一原因是 Meta 的 container API 要「公開 HTTPS URL」來抓檔案。
+新通道直接把檔案上傳到**使用者自己的 bucket** → 給 Meta 抓 → 發完自動刪除：
+
+- 支援 **Cloudflare R2**（免費 10GB + 零出流量費，推薦）/ AWS S3 / Backblaze B2 / MinIO（自架）
+- **無本機 port** → port 佔用問題根治
+- **無 cloudflared 進程** → spawn/kill/CLI bug 全部消失
+- **無限並發**（每次上傳都是獨立 object key）
+- 兩種 URL 模式：presigned（bucket 免公開、1 小時失效，預設推薦）/ 公開 URL 前綴
+- Keys 用 Windows DPAPI 加密存 DB
+- 設定頁內建 R2 五分鐘設定教學 + 一鍵測試連線（寫入/讀取/刪除全鏈驗證）
+
+### 🔄 新功能二：Named Tunnel singleton 重構
+
+舊設計每次上傳 spawn cloudflared + 開 server，用完 kill → socket TIME_WAIT → 高頻發布 port 被佔。
+新設計：
+- 整個 App 生命週期只有**一個常駐 server + 一個常駐 cloudflared**
+- server 是多檔案註冊表（Map），同時 serve 多個檔案，URL 帶唯一前綴不互撞
+- port **只 bind 一次**，永不釋放重綁 → 佔用問題根治
+- token/hostname 變更自動重建；cloudflared 意外死掉下次上傳自動復活
+- 切離 named 模式 / App 結束時自動關閉
+
+### 🖥 UI
+
+設定頁「IG 隧道工具」改名「**媒體發布通道（IG / Threads）**」，三模式：
+1. ☁️ 雲端物件儲存（推薦 — 穩定 + 可高頻）
+2. Named Tunnel（v0.8.0 起常駐連線）
+3. Quick Tunnel（零設定，偶爾發布用）
+
+### 🔧 技術
+- 新依賴：`@aws-sdk/client-s3`、`@aws-sdk/s3-request-presigner`（Apache-2.0）
+- DB schema v11：`s3_configs` 表（keys DPAPI 加密）
+- 新檔：`src/main/lib/s3ConfigRepo.ts`、`src/main/lib/s3MediaHost.ts`
+- `serveFileViaCloudflareTunnel` dispatcher 加 s3 分支 — adapters 零修改
+- 新 IPC：`tunnel:getS3Config / saveS3Config / deleteS3Config / testS3`
+- 規劃文件：`docs/v0.8.0_媒體通道抽象化規劃.md`
+
+### 📋 使用者遷移
+- 升級後預設模式不變（quick/named 維持原設定）
+- 建議：Cloudflare dashboard → R2 → 建 bucket + API Token → 填入設定頁 → 測試 → 切到物件儲存模式
+- 開源商用版待辦（v0.9.0）：OAuth credentials 首次啟動精靈（不再 bundle secrets）
+
+---
+
 ## v0.7.6 — 2026-06-02 — 修 IG 圖文發布「Only photo or video can be accepted」錯誤
 
 ### 🐛 症狀

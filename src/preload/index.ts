@@ -19,7 +19,9 @@ import type {
   PublishProgressEvent,
   PublishStartArgs,
   PuffinAPI,
+  S3ConfigPublic,
   SaveDraftArgs,
+  SaveS3ConfigInput,
   ScheduleArgs,
   TemplateMode,
   TunnelMode,
@@ -235,7 +237,16 @@ const api: PuffinAPI = {
     testNamed: (input: { token: string; publicHostname: string }) =>
       ipcRenderer.invoke('tunnel:testNamed', input) as Promise<{ ok: boolean; message: string }>,
     getNamedLocalPort: () =>
-      ipcRenderer.invoke('tunnel:getNamedLocalPort') as Promise<number>
+      ipcRenderer.invoke('tunnel:getNamedLocalPort') as Promise<number>,
+    // v0.8.0：S3 相容物件儲存
+    getS3Config: () =>
+      ipcRenderer.invoke('tunnel:getS3Config') as Promise<S3ConfigPublic | null>,
+    saveS3Config: (input: SaveS3ConfigInput) =>
+      ipcRenderer.invoke('tunnel:saveS3Config', input) as Promise<S3ConfigPublic>,
+    deleteS3Config: () =>
+      ipcRenderer.invoke('tunnel:deleteS3Config') as Promise<boolean>,
+    testS3: (input: SaveS3ConfigInput) =>
+      ipcRenderer.invoke('tunnel:testS3', input) as Promise<{ ok: boolean; message: string }>
   }
 };
 

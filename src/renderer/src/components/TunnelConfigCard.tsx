@@ -1,10 +1,11 @@
 /**
- * v0.5.0：IG 隧道工具設定卡片
+ * v0.5.0：IG 隧道工具設定卡片 → v0.8.0 改名「媒體發布通道」
  *
- * 兩個模式：
- *   - quick (預設)：cloudflared quick tunnel，無需設定，但 Cloudflare 對 IP 限流（error 1015）
- *   - named-cloudflare：Cloudflare named tunnel，需 Cloudflare 帳號 + tunnel token + hostname，
- *                       無 IP 限流，永久穩定
+ * 三個模式：
+ *   - s3（v0.8.0 新增，推薦）：雲端物件儲存（R2/S3/B2/MinIO），無 port / 無 cloudflared，
+ *     可高頻無限並發，商用版主推
+ *   - named-cloudflare：Cloudflare named tunnel（v0.8.0 起 singleton 常駐，port 只 bind 一次）
+ *   - quick (預設)：cloudflared quick tunnel，零設定但 Cloudflare 對 IP 限流（error 1015）
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -33,7 +34,7 @@ import {
   IconRefresh,
   IconExternalLink
 } from '@tabler/icons-react';
-import type { TunnelMode, TunnelNamedConfigPublic } from '../../../shared/types';
+import type { S3ConfigPublic, TunnelMode, TunnelNamedConfigPublic } from '../../../shared/types';
 
 export function TunnelConfigCard(): JSX.Element {
   const [mode, setMode] = useState<TunnelMode>('quick');
@@ -46,11 +47,24 @@ export function TunnelConfigCard(): JSX.Element {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [redownloadingCf, setRedownloadingCf] = useState(false);
 
+  // v0.8.0：S3 相容物件儲存
+  const [s3Config, setS3Config] = useState<S3ConfigPublic | null>(null);
+  const [s3Endpoint, setS3Endpoint] = useState('');
+  const [s3Bucket, setS3Bucket] = useState('');
+  const [s3Region, setS3Region] = useState('auto');
+  const [s3AccessKey, setS3AccessKey] = useState('');
+  const [s3SecretKey, setS3SecretKey] = useState('');
+  const [s3PublicBaseUrl, setS3PublicBaseUrl] = useState('');
+  const [s3Busy, setS3Busy] = useState(false);
+  const [s3Testing, setS3Testing] = useState(false);
+  const [s3TestResult, setS3TestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   const reload = useCallback(async () => {
-    const [m, c, p] = await Promise.all([
+    const [m, c, p, s3] = await Promise.all([
       window.puffin.tunnel.getMode(),
       window.puffin.tunnel.getNamedConfig(),
-      window.puffin.tunnel.getNamedLocalPort()
+      window.puffin.tunnel.getNamedLocalPort(),
+      window.puffin.tunnel.getS3Config()
     ]);
     setMode(m);
     setConfig(c);
@@ -62,6 +76,16 @@ export function TunnelConfigCard(): JSX.Element {
     } else {
       setHostname('');
       setToken('');
+    }
+    setS3Config(s3);
+    if (s3) {
+      setS3Endpoint(s3.endpoint);
+      setS3Bucket(s3.bucket);
+      setS3Region(s3.region);
+      setS3PublicBaseUrl(s3.publicBaseUrl ?? '');
+      // keys 不回傳明文，欄位保持空白
+      setS3AccessKey('');
+      setS3SecretKey('');
     }
   }, []);
 
@@ -79,13 +103,27 @@ export function TunnelConfigCard(): JSX.Element {
       });
       return;
     }
+    if (newMode === 's3' && !s3Config) {
+      notifications.show({
+        title: '請先儲存物件儲存設定',
+        message: '填入 Endpoint / Bucket / Keys 並儲存後，才能切換到雲端物件儲存模式',
+        color: 'mango',
+        icon: <IconAlertTriangle size={18} />
+      });
+      return;
+    }
     setBusy(true);
     try {
       await window.puffin.tunnel.setMode(newMode);
       setMode(newMode);
       notifications.show({
-        title: '已切換 IG 隧道模式',
-        message: newMode === 'named-cloudflare' ? '改用 Cloudflare Named Tunnel（無 IP 限流）' : '改用 Quick Tunnel（無帳號 ad-hoc 隧道）',
+        title: '已切換媒體發布通道',
+        message:
+          newMode === 's3'
+            ? '改用雲端物件儲存（無 port、可高頻並發）'
+            : newMode === 'named-cloudflare'
+              ? '改用 Cloudflare Named Tunnel（無 IP 限流）'
+              : '改用 Quick Tunnel（無帳號 ad-hoc 隧道）',
         color: 'mint',
         icon: <IconCheck size={18} />
       });
@@ -214,6 +252,111 @@ export function TunnelConfigCard(): JSX.Element {
     }
   };
 
+  // ===== v0.8.0：S3 handlers =====
+
+  const handleS3Save = async (): Promise<void> => {
+    if (!s3Endpoint.trim() || !s3Bucket.trim()) {
+      notifications.show({ title: 'Endpoint / Bucket 不可為空', message: '', color: 'mango' });
+      return;
+    }
+    if (!s3AccessKey.trim() || !s3SecretKey.trim()) {
+      notifications.show({
+        title: 'Keys 不可為空',
+        message: '請填入 Access Key ID 與 Secret Access Key',
+        color: 'mango'
+      });
+      return;
+    }
+    setS3Busy(true);
+    try {
+      const c = await window.puffin.tunnel.saveS3Config({
+        endpoint: s3Endpoint.trim(),
+        bucket: s3Bucket.trim(),
+        region: s3Region.trim() || 'auto',
+        accessKeyId: s3AccessKey.trim(),
+        secretAccessKey: s3SecretKey.trim(),
+        publicBaseUrl: s3PublicBaseUrl.trim() || null
+      });
+      setS3Config(c);
+      setS3TestResult(null);
+      notifications.show({
+        title: '已儲存物件儲存設定',
+        message: 'Keys 已用 Windows DPAPI 加密儲存。可直接按「測試連線」驗證',
+        color: 'mint',
+        icon: <IconCheck size={18} />
+      });
+    } catch (e) {
+      notifications.show({ title: '儲存失敗', message: (e as Error).message, color: 'red' });
+    } finally {
+      setS3Busy(false);
+    }
+  };
+
+  const handleS3Test = async (): Promise<void> => {
+    if (!s3Endpoint.trim() || !s3Bucket.trim()) {
+      notifications.show({ title: 'Endpoint / Bucket 不可為空', message: '', color: 'mango' });
+      return;
+    }
+    if ((!s3AccessKey.trim() || !s3SecretKey.trim()) && !s3Config) {
+      notifications.show({
+        title: 'Keys 為空',
+        message: '首次使用請先填 keys 再測試',
+        color: 'mango'
+      });
+      return;
+    }
+    setS3Testing(true);
+    setS3TestResult(null);
+    try {
+      // keys 空時 backend 會 fallback 用 DB 儲存的
+      const r = await window.puffin.tunnel.testS3({
+        endpoint: s3Endpoint.trim(),
+        bucket: s3Bucket.trim(),
+        region: s3Region.trim() || 'auto',
+        accessKeyId: s3AccessKey.trim(),
+        secretAccessKey: s3SecretKey.trim(),
+        publicBaseUrl: s3PublicBaseUrl.trim() || null
+      });
+      setS3TestResult(r);
+      const c = await window.puffin.tunnel.getS3Config();
+      setS3Config(c);
+    } catch (e) {
+      setS3TestResult({ ok: false, message: (e as Error).message });
+    } finally {
+      setS3Testing(false);
+    }
+  };
+
+  const handleS3Delete = async (): Promise<void> => {
+    if (!confirm('確定要刪除物件儲存設定嗎？（若當前使用此模式，會自動切回 Quick Tunnel）')) return;
+    setS3Busy(true);
+    try {
+      await window.puffin.tunnel.deleteS3Config();
+      if (mode === 's3') {
+        await window.puffin.tunnel.setMode('quick');
+        setMode('quick');
+      }
+      setS3Config(null);
+      setS3Endpoint('');
+      setS3Bucket('');
+      setS3Region('auto');
+      setS3AccessKey('');
+      setS3SecretKey('');
+      setS3PublicBaseUrl('');
+      setS3TestResult(null);
+      notifications.show({
+        title: '已刪除物件儲存設定',
+        message: '',
+        color: 'mint',
+        icon: <IconCheck size={18} />
+      });
+    } catch (e) {
+      notifications.show({ title: '刪除失敗', message: (e as Error).message, color: 'red' });
+    } finally {
+      setS3Busy(false);
+    }
+  };
+
   const handleRedownloadCf = async (): Promise<void> => {
     setRedownloadingCf(true);
     try {
@@ -243,28 +386,36 @@ export function TunnelConfigCard(): JSX.Element {
       <Stack gap="md">
         <Group gap="sm">
           <IconTransform size={20} color="#6FBF9D" />
-          <Title order={4} c="walnut.7">IG 隧道工具（cloudflared）</Title>
+          <Title order={4} c="walnut.7">媒體發布通道（IG / Threads）</Title>
         </Group>
         <Divider />
 
         <Text size="xs" c="dimmed">
-          IG Reels / 圖片上傳時，PuffinPuff 會起本機 HTTP server + cloudflared 隧道把檔案暴露成公開 HTTPS URL 供 Instagram 取用。
+          IG / Threads 的 API 需要一個「公開 HTTPS URL」讓 Meta 來抓媒體檔案。選擇 PuffinPuff 用哪種方式提供這個 URL。
         </Text>
 
         {/* === 模式選擇 === */}
         <Radio.Group
           value={mode}
           onChange={(v) => handleModeChange(v as TunnelMode)}
-          label="IG 隧道模式"
+          label="通道模式"
         >
           <Stack gap="xs" mt="xs">
             <Radio
-              value="quick"
+              value="s3"
+              disabled={!s3Config}
               label={
                 <Stack gap={0}>
-                  <Text size="sm" fw={600}>Quick Tunnel（預設、零設定）</Text>
+                  <Group gap="xs">
+                    <Text size="sm" fw={600}>☁️ 雲端物件儲存（推薦 — 穩定 + 可高頻）</Text>
+                    {s3Config ? (
+                      <Badge color="mint" variant="light" size="xs">已設定</Badge>
+                    ) : (
+                      <Badge color="dimmed" variant="light" size="xs">未設定（先填下方表單）</Badge>
+                    )}
+                  </Group>
                   <Text size="xs" c="dimmed">
-                    每次發布隨機開一條 trycloudflare.com URL。零設定但 Cloudflare 對 IP 有限流（error 1015）。適合偶爾發布。
+                    上傳到你自己的 R2 / S3 / B2 / MinIO bucket，發完自動刪除。無本機 port、無 cloudflared、無限並發。
                   </Text>
                 </Stack>
               }
@@ -289,7 +440,19 @@ export function TunnelConfigCard(): JSX.Element {
                     )}
                   </Group>
                   <Text size="xs" c="dimmed">
-                    用你 Cloudflare 帳號下的 named tunnel，固定 hostname、無 IP 限流。適合密集發布（每天 N 篇）。
+                    用你 Cloudflare 帳號下的 named tunnel，固定 hostname、無 IP 限流。v0.8.0 起常駐連線（不再反覆開關 port）。
+                  </Text>
+                </Stack>
+              }
+              color="mint"
+            />
+            <Radio
+              value="quick"
+              label={
+                <Stack gap={0}>
+                  <Text size="sm" fw={600}>Quick Tunnel（零設定）</Text>
+                  <Text size="xs" c="dimmed">
+                    每次發布隨機開一條 trycloudflare.com URL。零設定但 Cloudflare 對 IP 有限流（error 1015）。適合偶爾發布。
                   </Text>
                 </Stack>
               }
@@ -297,6 +460,158 @@ export function TunnelConfigCard(): JSX.Element {
             />
           </Stack>
         </Radio.Group>
+
+        <Divider variant="dashed" />
+
+        {/* === v0.8.0：S3 物件儲存設定區 === */}
+        <Stack gap="xs">
+          <Text size="sm" fw={600} c="walnut.7">
+            ☁️ 雲端物件儲存設定（S3 相容）
+          </Text>
+
+          <Alert color="sky" variant="light" radius="md" icon={<IconRocket size={18} />}>
+            <Text size="xs">
+              <strong>推薦用 Cloudflare R2（免費 10GB + 零出流量費）— 設定流程（~5 分鐘）：</strong>
+              <br />
+              1. Cloudflare dashboard → R2 → <strong>Create bucket</strong>（例 <Code>puffinpuff-media</Code>）
+              <br />
+              2. R2 → Manage API Tokens → <strong>Create API Token</strong>（權限：Object Read &amp; Write，範圍限定該 bucket）
+              <br />
+              3. 記下 <Code>Access Key ID</Code> / <Code>Secret Access Key</Code> / 帳號的 <Code>S3 Endpoint</Code>（形如 https://&lt;accountid&gt;.r2.cloudflarestorage.com）
+              <br />
+              4. 填入下方 → 儲存 → 測試連線
+              <br />
+              <strong>公開 URL 前綴</strong>：留空 = 用 presigned URL（bucket 免公開，較安全，推薦）；
+              有綁 r2.dev 或自訂網域才需要填。
+              <br />
+              也支援 AWS S3 / Backblaze B2 / MinIO — 填各家的 endpoint 即可。
+            </Text>
+          </Alert>
+
+          <TextInput
+            label="Endpoint URL"
+            description="S3 API endpoint（R2 形如 https://<accountid>.r2.cloudflarestorage.com）"
+            placeholder="https://xxxxxxxx.r2.cloudflarestorage.com"
+            value={s3Endpoint}
+            onChange={(e) => setS3Endpoint(e.currentTarget.value)}
+            autoComplete="off"
+          />
+          <Group grow>
+            <TextInput
+              label="Bucket 名稱"
+              placeholder="puffinpuff-media"
+              value={s3Bucket}
+              onChange={(e) => setS3Bucket(e.currentTarget.value)}
+              autoComplete="off"
+            />
+            <TextInput
+              label="Region"
+              description="R2 / MinIO 填 auto 即可"
+              placeholder="auto"
+              value={s3Region}
+              onChange={(e) => setS3Region(e.currentTarget.value)}
+              autoComplete="off"
+            />
+          </Group>
+          <PasswordInput
+            label="Access Key ID"
+            description={s3Config?.hasKeys ? 'Keys 已加密儲存（DPAPI）。測試不需重貼；要換 keys 才需重新填。' : undefined}
+            value={s3AccessKey}
+            onChange={(e) => setS3AccessKey(e.currentTarget.value)}
+            autoComplete="off"
+          />
+          <PasswordInput
+            label="Secret Access Key"
+            value={s3SecretKey}
+            onChange={(e) => setS3SecretKey(e.currentTarget.value)}
+            autoComplete="off"
+          />
+          <TextInput
+            label="公開 URL 前綴（選填）"
+            description="留空 = presigned URL 模式（推薦）。有綁公開域名才填，例 https://pub-xxxx.r2.dev"
+            placeholder="（留空使用 presigned URL）"
+            value={s3PublicBaseUrl}
+            onChange={(e) => setS3PublicBaseUrl(e.currentTarget.value)}
+            autoComplete="off"
+          />
+
+          <Group justify="space-between" align="center">
+            <Group gap="xs">
+              <Button
+                color="mint"
+                size="xs"
+                onClick={handleS3Save}
+                loading={s3Busy && !s3Testing}
+                disabled={!s3Endpoint.trim() || !s3Bucket.trim() || !s3AccessKey.trim() || !s3SecretKey.trim()}
+              >
+                儲存設定
+              </Button>
+              <Button
+                variant="light"
+                color="sky"
+                size="xs"
+                leftSection={<IconRefresh size={14} />}
+                onClick={handleS3Test}
+                loading={s3Testing}
+                disabled={!s3Endpoint.trim() || !s3Bucket.trim() || (!s3AccessKey.trim() && !s3Config)}
+              >
+                測試連線
+              </Button>
+            </Group>
+            {s3Config && (
+              <Button
+                variant="subtle"
+                color="red"
+                size="xs"
+                leftSection={<IconTrash size={14} />}
+                onClick={handleS3Delete}
+                disabled={s3Busy}
+              >
+                刪除設定
+              </Button>
+            )}
+          </Group>
+
+          {s3Config && (
+            <Card padding="xs" withBorder radius="sm" style={{ backgroundColor: '#FDFAF6' }}>
+              <Stack gap={4}>
+                <Text size="xs">
+                  <strong>Bucket：</strong>{s3Config.bucket}（{s3Config.publicBaseUrl ? '公開 URL 模式' : 'presigned URL 模式'}）
+                </Text>
+                {s3Config.lastVerifiedAt ? (
+                  <Group gap="xs">
+                    <Badge color="mint" variant="light" size="xs">已驗證</Badge>
+                    <Text size="xs" c="dimmed">
+                      最後測試：{new Date(s3Config.lastVerifiedAt).toLocaleString('zh-TW')}
+                    </Text>
+                  </Group>
+                ) : s3Config.lastError ? (
+                  <Group gap="xs" align="flex-start">
+                    <Badge color="red" variant="light" size="xs">測試失敗</Badge>
+                    <Text size="xs" c="red" style={{ whiteSpace: 'pre-wrap', flex: 1 }}>
+                      {s3Config.lastError}
+                    </Text>
+                  </Group>
+                ) : (
+                  <Text size="xs" c="dimmed">尚未測試過。建議按「測試連線」確認設定正確。</Text>
+                )}
+              </Stack>
+            </Card>
+          )}
+
+          {s3TestResult && (
+            <Alert
+              color={s3TestResult.ok ? 'mint' : 'red'}
+              variant="light"
+              radius="md"
+              icon={s3TestResult.ok ? <IconCheck size={18} /> : <IconAlertTriangle size={18} />}
+            >
+              <Text size="xs" style={{ whiteSpace: 'pre-wrap' }}>
+                {s3TestResult.message}
+              </Text>
+            </Alert>
+          )}
+        </Stack>
 
         <Divider variant="dashed" />
 

@@ -344,6 +344,8 @@ app.on('before-quit', () => {
   stopMetaTokenRefreshSchedule();
   stopAllWatchers();
   closeDatabase();
+  // v0.8.0：關掉 named tunnel singleton（常駐 cloudflared + server）
+  void import('./lib/tunnel').then((m) => m.shutdownNamedTunnelSingleton()).catch(() => {});
   if (tray && !tray.isDestroyed()) {
     tray.destroy();
     tray = null;

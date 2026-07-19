@@ -1,7 +1,7 @@
 {
   "name": "puffinpuff",
   "productName": "海鸚泡芙 PuffinPuff",
-  "version": "0.7.6",
+  "version": "0.8.0",
   "description": "一次發布到 YouTube Shorts、FB Reels、IG Reels 的桌面工具",
   "main": "./out/main/index.js",
   "author": "VVLEE",
@@ -19,6 +19,8 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1090.0",
+    "@aws-sdk/s3-request-presigner": "^3.1090.0",
     "@mantine/core": "^7.13.4",
     "@mantine/dates": "^7.17.8",
     "@mantine/dropzone": "^7.17.8",

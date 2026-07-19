@@ -282,8 +282,12 @@ async function attemptTunnel(
 export async function serveFileViaCloudflareTunnel(
   opts: ServeOptions
 ): Promise<TunneledFile> {
-  // v0.5.0：根據設定模式分派
+  // v0.5.0：根據設定模式分派；v0.8.0 加 s3 物件儲存分支
   const mode = getTunnelMode();
+  if (mode === 's3') {
+    const { hostFileViaS3 } = await import('./s3MediaHost');
+    return await hostFileViaS3(opts);
+  }
   if (mode === 'named-cloudflare') {
     return await serveViaNamedCloudflareTunnel(opts);
   }
@@ -481,34 +485,66 @@ async function serveViaQuickCloudflareTunnel(
  *
  * @param port - 0 表示隨機 port；其他值表示固定 port（named tunnel mode 用）
  */
-function createLocalFileServerOnce(args: {
-  filePath: string;
-  exposedName: string;
-  port: number;
-}): Promise<{ server: Server; port: number; close: () => Promise<void> }> {
-  return new Promise((resolve, reject) => {
-    const { filePath, exposedName, port } = args;
-    const fileSize = statSync(filePath).size;
-    const fileBuffer = readFileSync(filePath);
-    // v0.6.0：依副檔名挑 Content-Type
-    const contentType = contentTypeForName(exposedName);
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+// ============================================================
+// v0.8.0：Named tunnel singleton 架構
+//
+// 舊設計（v0.5.0-v0.7.x）：每次上傳 spawn 一個 cloudflared + 開一個 server，
+// 用完 kill → socket TIME_WAIT → 下次 bind port 33344 失敗（高頻發布常見）。
+//
+// 新設計：整個 App 生命週期只有一個常駐 server + 一個常駐 cloudflared。
+//   - server 是「多檔案註冊表」：Map<urlName, filePath>，可同時 serve 多個檔案
+//   - 上傳 = registry.set()；發布完成 = registry.delete()
+//   - port 只 bind 一次 → 佔用問題根治；cloudflared 不再反覆 spawn → 穩定性大增
+//   - token/hostname 變更時自動重建 singleton
+// ============================================================
+
+interface RegistryEntry {
+  filePath: string;
+  contentType: string;
+}
+
+interface NamedTunnelSingleton {
+  server: Server;
+  proc: ChildProcess;
+  registry: Map<string, RegistryEntry>;
+  /** token+hostname 簽章 — 設定變更時用來判斷要不要重建 */
+  configSig: string;
+  publicHostname: string;
+}
+
+let namedSingleton: NamedTunnelSingleton | null = null;
+/** 防止並發初始化：多個上傳同時觸發時只建一次 */
+let namedSingletonInit: Promise<NamedTunnelSingleton> | null = null;
+
+function startRegistryServer(
+  port: number,
+  registry: Map<string, RegistryEntry>
+): Promise<Server> {
+  return new Promise((resolve, reject) => {
     const server: Server = createServer((req, res) => {
-      if (!req.url || !req.url.startsWith('/' + exposedName)) {
+      const urlName = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\/+/, ''));
+      const entry = registry.get(urlName);
+      if (!entry || !existsSync(entry.filePath)) {
         res.writeHead(404).end();
         return;
       }
-      // v0.6.0：支援 HEAD
+      const fileSize = statSync(entry.filePath).size;
+      const headers = {
+        'Content-Type': entry.contentType,
+        'Accept-Ranges': 'bytes',
+        'Access-Control-Allow-Origin': '*'
+      };
       if (req.method === 'HEAD') {
-        res.writeHead(200, {
-          'Content-Type': contentType,
-          'Content-Length': fileSize,
-          'Accept-Ranges': 'bytes',
-          'Access-Control-Allow-Origin': '*'
-        });
+        res.writeHead(200, { ...headers, 'Content-Length': fileSize });
         res.end();
         return;
       }
+      // 每次請求時才讀檔（registry 模式不預載入 RAM，多檔並發也不會爆記憶體）
+      const fileBuffer = readFileSync(entry.filePath);
       const range = req.headers.range;
       if (range) {
         const match = /bytes=(\d+)-(\d*)/.exec(range);
@@ -516,103 +552,163 @@ function createLocalFileServerOnce(args: {
           const start = parseInt(match[1], 10);
           const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
           res.writeHead(206, {
-            'Content-Type': contentType,
+            ...headers,
             'Content-Length': end - start + 1,
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Access-Control-Allow-Origin': '*'
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`
           });
           res.end(fileBuffer.subarray(start, end + 1));
           return;
         }
       }
-      res.writeHead(200, {
-        'Content-Type': contentType,
-        'Content-Length': fileSize,
-        'Accept-Ranges': 'bytes',
-        'Access-Control-Allow-Origin': '*'
-      });
+      res.writeHead(200, { ...headers, 'Content-Length': fileSize });
       res.end(fileBuffer);
     });
 
-    server.on('error', (e: NodeJS.ErrnoException) => {
-      reject(e);
-    });
-
+    server.once('error', (e: NodeJS.ErrnoException) => reject(e));
     server.listen(port, '127.0.0.1', () => {
-      const actualPort = (server.address() as AddressInfo).port;
-      console.log(`[tunnel] local HTTP server on 127.0.0.1:${actualPort}`);
-      resolve({
-        server,
-        port: actualPort,
-        // v0.7.5：close 時強制斷所有連線，避免 socket lingering 在 TIME_WAIT 卡住下次 bind
-        close: () => new Promise((res) => {
-          try {
-            // Node 18.2+：把當下所有 socket 一次性 destroy
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const anyServer = server as any;
-            if (typeof anyServer.closeAllConnections === 'function') {
-              anyServer.closeAllConnections();
-            }
-          } catch {
-            /* noop */
-          }
-          server.close(() => res());
-        })
-      });
+      console.log(`[tunnel] singleton registry server on 127.0.0.1:${port}`);
+      resolve(server);
     });
   });
 }
 
-/**
- * v0.7.5：包裝 createLocalFileServerOnce — 遇到 EADDRINUSE 自動 retry。
- *
- * 原因：上一次 named tunnel 的 socket 可能還在 TIME_WAIT（Windows 平台特別常見）。
- * 等個 1.5 / 3 / 4.5 秒讓 OS 釋放，再試一次。
- *
- * 若三次都失敗才丟原本的「port 被佔用」錯誤訊息。
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function createLocalFileServer(args: {
-  filePath: string;
-  exposedName: string;
-  port: number;
-  onStatus?: (msg: string) => void;
-}): Promise<{ server: Server; port: number; close: () => Promise<void> }> {
+async function startRegistryServerWithRetry(
+  port: number,
+  registry: Map<string, RegistryEntry>,
+  onStatus?: (msg: string) => void
+): Promise<Server> {
   const MAX_RETRIES = 3;
   const BACKOFF_MS = [1_500, 3_000, 4_500];
-
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await createLocalFileServerOnce(args);
+      return await startRegistryServer(port, registry);
     } catch (e) {
       const err = e as NodeJS.ErrnoException;
-      const isAddrInUse = err.code === 'EADDRINUSE' && args.port !== 0;
-      if (!isAddrInUse || attempt === MAX_RETRIES) {
-        if (isAddrInUse) {
+      if (err.code !== 'EADDRINUSE' || attempt === MAX_RETRIES) {
+        if (err.code === 'EADDRINUSE') {
           throw new Error(
-            `本機 port ${args.port} 持續被佔用 ${MAX_RETRIES + 1} 次重試後仍無法綁定。\n` +
-            `\n` +
-            `這通常是上次 named tunnel 連線還在 TIME_WAIT 狀態，再等 30-60 秒應自動釋放。\n` +
-            `\n` +
-            `若一直無法解決，可：\n` +
+            `本機 port ${port} 持續被佔用（重試 ${MAX_RETRIES + 1} 次後仍無法綁定）。\n\n` +
+            `可能是另一個 PuffinPuff 進程或其他程式佔用了 port。\n` +
             `  1. 完全結束 PuffinPuff（含系統匣圖示右鍵 → 結束）再重開\n` +
-            `  2. 用 PowerShell 查佔用程式：netstat -ano | findstr :${args.port}\n` +
-            `  3. 切回 quick tunnel 模式（設定 → IG 隧道工具）`
+            `  2. 用 PowerShell 查佔用程式：netstat -ano | findstr :${port}\n` +
+            `  3. 切到「雲端物件儲存」模式（設定 → 媒體發布通道）— 完全沒有 port 問題`
           );
         }
         throw err;
       }
       const delay = BACKOFF_MS[attempt];
-      console.warn(`[tunnel] port ${args.port} 被佔用，第 ${attempt + 1}/${MAX_RETRIES} 次重試，${delay}ms 後...`);
-      args.onStatus?.(`port ${args.port} 被前次連線佔用中，等 ${Math.round(delay / 1000)} 秒後重試（${attempt + 1}/${MAX_RETRIES}）...`);
+      console.warn(`[tunnel] port ${port} 被佔用，${delay}ms 後重試（${attempt + 1}/${MAX_RETRIES}）...`);
+      onStatus?.(`port ${port} 被佔用中，等 ${Math.round(delay / 1000)} 秒後重試（${attempt + 1}/${MAX_RETRIES}）...`);
       await sleep(delay);
     }
   }
   throw new Error('unreachable');
+}
+
+/** 關掉 singleton（設定變更 / App 結束時用）*/
+export async function shutdownNamedTunnelSingleton(): Promise<void> {
+  const s = namedSingleton;
+  namedSingleton = null;
+  namedSingletonInit = null;
+  if (!s) return;
+  try {
+    s.proc.kill();
+  } catch {
+    /* noop */
+  }
+  await new Promise<void>((res) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyServer = s.server as any;
+      if (typeof anyServer.closeAllConnections === 'function') {
+        anyServer.closeAllConnections();
+      }
+    } catch {
+      /* noop */
+    }
+    s.server.close(() => res());
+  });
+  console.log('[tunnel] named tunnel singleton shut down');
+}
+
+async function ensureNamedSingleton(
+  onStatus?: (msg: string) => void
+): Promise<NamedTunnelSingleton> {
+  const config = getTunnelConfigInternal('named-cloudflare');
+  if (!config) {
+    throw new Error(
+      'Named tunnel 模式已啟用，但找不到設定。\n' +
+      '請至「設定 → 媒體發布通道」填入 Cloudflare token + hostname，或改用其他通道模式。'
+    );
+  }
+  const configSig = `${config.token.slice(0, 16)}|${config.publicHostname}`;
+
+  // 既有 singleton 還活著且設定沒變 → 直接用
+  if (
+    namedSingleton &&
+    namedSingleton.proc.exitCode === null &&
+    !namedSingleton.proc.killed &&
+    namedSingleton.configSig === configSig
+  ) {
+    return namedSingleton;
+  }
+
+  // 設定變了或 cloudflared 死了 → 重建
+  if (namedSingleton) {
+    console.log('[tunnel] singleton stale（config 變更或 cloudflared 已結束），重建...');
+    await shutdownNamedTunnelSingleton();
+  }
+
+  // 並發保護：多個上傳同時觸發初始化時只建一次
+  if (namedSingletonInit) return await namedSingletonInit;
+
+  namedSingletonInit = (async (): Promise<NamedTunnelSingleton> => {
+    const registry = new Map<string, RegistryEntry>();
+    const server = await startRegistryServerWithRetry(NAMED_TUNNEL_LOCAL_PORT, registry, onStatus);
+
+    const bin = await ensureCloudflared(onStatus);
+    onStatus?.('啟動 Cloudflare named tunnel（常駐）...');
+    const proc = spawn(bin, ['tunnel', 'run', '--token', config.token], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    try {
+      await waitForNamedTunnelReady(proc, 30_000);
+      console.log('[tunnel] singleton named tunnel ready for', config.publicHostname);
+    } catch (e) {
+      try {
+        proc.kill();
+      } catch {
+        /* noop */
+      }
+      await new Promise<void>((res) => server.close(() => res()));
+      throw e;
+    }
+
+    // cloudflared 意外死掉 → 清 singleton，下次上傳自動重建
+    proc.on('exit', (code) => {
+      if (namedSingleton?.proc === proc) {
+        console.warn(`[tunnel] singleton cloudflared exited (code=${code})，下次上傳會自動重建`);
+        namedSingleton = null;
+      }
+    });
+
+    const singleton: NamedTunnelSingleton = {
+      server,
+      proc,
+      registry,
+      configSig,
+      publicHostname: config.publicHostname
+    };
+    namedSingleton = singleton;
+    return singleton;
+  })();
+
+  try {
+    return await namedSingletonInit;
+  } finally {
+    namedSingletonInit = null;
+  }
 }
 
 /**
@@ -681,58 +777,24 @@ async function serveViaNamedCloudflareTunnel(
   opts: ServeOptions
 ): Promise<TunneledFile> {
   const { filePath, exposedName = 'video.mp4', onStatus } = opts;
-  const config = getTunnelConfigInternal('named-cloudflare');
-  if (!config) {
-    throw new Error(
-      'Named tunnel 模式已啟用，但找不到設定。\n' +
-      '請至「設定 → IG 隧道工具（Named Tunnel）」填入 Cloudflare token + hostname，或切回 quick tunnel 模式。'
-    );
-  }
 
-  // 1. 本機 HTTP server（固定 port，需要與 Cloudflare dashboard 設定的 service URL 對應）
-  //    v0.7.5：port 被佔用時自動 retry 3 次，且 onStatus 即時回報給 UI
-  const fs = await createLocalFileServer({
+  // v0.8.0 singleton：確保常駐 server + cloudflared 活著（第一次呼叫才啟動）
+  const singleton = await ensureNamedSingleton(onStatus);
+
+  // 唯一 URL 名稱（保留副檔名讓 Meta 能識別格式）— 並發上傳不會互撞
+  const urlName = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}-${exposedName}`;
+  singleton.registry.set(urlName, {
     filePath,
-    exposedName,
-    port: NAMED_TUNNEL_LOCAL_PORT,
-    onStatus
+    contentType: contentTypeForName(exposedName)
   });
-
-  // 2. spawn cloudflared with token
-  const bin = await ensureCloudflared(onStatus);
-  onStatus?.('啟動 Cloudflare named tunnel...');
-  const proc = spawn(
-    bin,
-    // v0.5.3：完全拿掉 --no-autoupdate（不論放開頭或結尾都會觸發 help mode）。
-    //         Windows 預設就不會 auto-update（cloudflared 啟動時會印 "cloudflared will not automatically update on Windows systems"）
-    ['tunnel', 'run', '--token', config.token],
-    { stdio: ['ignore', 'pipe', 'pipe'] }
-  );
-
-  // 3. 等待 tunnel 連線就緒
-  try {
-    await waitForNamedTunnelReady(proc, 30_000);
-    console.log('[tunnel] named tunnel ready for', config.publicHostname);
-  } catch (e) {
-    try {
-      proc.kill();
-    } catch {
-      /* noop */
-    }
-    await fs.close();
-    throw e;
-  }
+  console.log(`[tunnel] registered ${urlName} (registry size=${singleton.registry.size})`);
 
   return {
-    url: `https://${config.publicHostname}/${exposedName}`,
+    url: `https://${singleton.publicHostname}/${urlName}`,
     close: async () => {
-      try {
-        proc.kill();
-      } catch {
-        /* noop */
-      }
-      await fs.close();
-      console.log('[tunnel] named tunnel closed');
+      // 只從註冊表移除 — server / cloudflared 保持常駐，port 永不釋放重綁
+      singleton.registry.delete(urlName);
+      console.log(`[tunnel] unregistered ${urlName} (registry size=${singleton.registry.size})`);
     }
   };
 }

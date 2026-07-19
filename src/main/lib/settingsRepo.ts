@@ -27,13 +27,15 @@ export function deleteSetting(key: string): void {
 
 // ===== 型別安全的 typed accessors =====
 
-export type TunnelMode = 'quick' | 'named-cloudflare';
+/** v0.8.0：加 's3'（雲端物件儲存）— 沿用同一個設定 key，舊值向後相容 */
+export type TunnelMode = 'quick' | 'named-cloudflare' | 's3';
 
 const TUNNEL_MODE_KEY = 'tunnel_mode';
 
 export function getTunnelMode(): TunnelMode {
   const v = getSetting(TUNNEL_MODE_KEY);
   if (v === 'named-cloudflare') return 'named-cloudflare';
+  if (v === 's3') return 's3';
   return 'quick';
 }
 

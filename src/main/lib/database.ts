@@ -312,6 +312,31 @@ function applySchema(database: Database): void {
       Date.now()
     ]);
   }
+
+  if (currentVersion < 11) {
+    // v11：v0.8.0 媒體通道抽象化 — S3 相容物件儲存設定
+    //   支援 Cloudflare R2 / AWS S3 / Backblaze B2 / MinIO 等（同一套 S3 API）
+    //   access key / secret key 用 safeStorage (DPAPI) 加密
+    database.run(`
+      CREATE TABLE IF NOT EXISTS s3_configs (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        endpoint TEXT NOT NULL,
+        bucket TEXT NOT NULL,
+        region TEXT NOT NULL DEFAULT 'auto',
+        encrypted_access_key BLOB NOT NULL,
+        encrypted_secret_key BLOB NOT NULL,
+        public_base_url TEXT,
+        last_verified_at INTEGER,
+        last_error TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `);
+    execute('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)', [
+      11,
+      Date.now()
+    ]);
+  }
 }
 
 export function getDatabase(): Database {

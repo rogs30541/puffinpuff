@@ -603,7 +603,28 @@ export interface UpdateTemplateInput extends Partial<CreateTemplateInput> {
 
 // === v0.5.0：tunnel 設定 ===
 
-export type TunnelMode = 'quick' | 'named-cloudflare';
+/** v0.8.0：加 's3'（雲端物件儲存 — R2/S3/B2/MinIO）*/
+export type TunnelMode = 'quick' | 'named-cloudflare' | 's3';
+
+/** v0.8.0：S3 相容儲存設定（renderer 用，不含 keys 原文）*/
+export interface S3ConfigPublic {
+  endpoint: string;
+  bucket: string;
+  region: string;
+  hasKeys: boolean;
+  publicBaseUrl: string | null;
+  lastVerifiedAt: number | null;
+  lastError: string | null;
+}
+
+export interface SaveS3ConfigInput {
+  endpoint: string;
+  bucket: string;
+  region?: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  publicBaseUrl?: string | null;
+}
 
 export interface TunnelNamedConfigPublic {
   id: number;
@@ -766,6 +787,11 @@ export interface PuffinAPI {
     deleteNamedConfig(): Promise<boolean>;
     testNamed(input: { token: string; publicHostname: string }): Promise<{ ok: boolean; message: string }>;
     getNamedLocalPort(): Promise<number>;
+    /** v0.8.0：S3 相容物件儲存（R2/S3/B2/MinIO）*/
+    getS3Config(): Promise<S3ConfigPublic | null>;
+    saveS3Config(input: SaveS3ConfigInput): Promise<S3ConfigPublic>;
+    deleteS3Config(): Promise<boolean>;
+    testS3(input: SaveS3ConfigInput): Promise<{ ok: boolean; message: string }>;
   };
   schedule: {
     /** 排程單一發布；回傳 post id */
