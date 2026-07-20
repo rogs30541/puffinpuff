@@ -648,8 +648,18 @@ function startPublishJob(
           }
         }
 
-        const results: Promise<void>[] = [];
-        for (const platform of platforms) {
+        // v0.9.2：防 port 佔用 — 平台「錯開序列發布」取代並聯發布
+        //   順序：IG（唯一吃 tunnel/port 的平台）→ FB → YT Shorts → Threads
+        //   每個平台完成後：tunnel 已在 adapter finally 關閉（清 port）→ 等 30 秒讓
+        //   OS 完全釋放 socket（quick tunnel 的 TIME_WAIT）→ 再發下一個平台
+        const PLATFORM_ORDER: PlatformKey[] = ['instagram', 'facebook', 'youtube', 'threads'];
+        const orderedPlatforms = [...platforms].sort(
+          (a, b) => PLATFORM_ORDER.indexOf(a) - PLATFORM_ORDER.indexOf(b)
+        );
+        const INTER_PLATFORM_DELAY_MS = 30_000;
+
+        for (let i = 0; i < orderedPlatforms.length; i++) {
+          const platform = orderedPlatforms[i];
           if (job.cancelRequested) {
             updatePlatform(job, platform, { status: 'cancelled' });
             continue;
@@ -664,6 +674,7 @@ function startPublishJob(
           }
           const content = effectiveContent(args.content.common, args.content.perPlatform[platform]);
 
+          let run: Promise<void> | null = null;
           if (platform === 'youtube') {
             const ytOverride = args.content.perPlatform.youtube;
             const ytContent = ytOverride.useNativeDefaults
@@ -674,41 +685,43 @@ function startPublishJob(
                   privacy: 'private' as const
                 }
               : content;
-            results.push(
-              runYouTube(job, uploadPath, account, ytContent).catch(() => {
-                /* 狀態已在 runYouTube 內部更新 */
-              })
-            );
+            run = runYouTube(job, uploadPath, account, ytContent);
           } else if (platform === 'facebook') {
             // v0.6.0：tri-state mode
             //   video → Reels API；image / carousel → photo API（FB photo API 自動處理單/多圖）
-            const fbRun = postType === 'video'
+            run = postType === 'video'
               ? runFacebook(job, uploadPath, account, content)
               : runFacebookPhoto(job, uploadPath, account, content);
-            results.push(fbRun.catch(() => { /* 內部已更新 */ }));
           } else if (platform === 'instagram') {
             // v0.6.0：tri-state mode
             //   video → Reels API；image → 單圖 API；carousel → carousel API
-            let igRun: Promise<void>;
             if (postType === 'video') {
-              igRun = runInstagram(job, uploadPath, account, content);
+              run = runInstagram(job, uploadPath, account, content);
             } else if (postType === 'carousel') {
-              igRun = runInstagramImage(job, uploadPath, account, content, args.content.imageCarouselPaths);
+              run = runInstagramImage(job, uploadPath, account, content, args.content.imageCarouselPaths);
             } else {
               // image：強制 carouselPaths=undefined，確保走單圖路徑
-              igRun = runInstagramImage(job, uploadPath, account, content, undefined);
+              run = runInstagramImage(job, uploadPath, account, content, undefined);
             }
-            results.push(igRun.catch(() => { /* 內部已更新 */ }));
           } else if (platform === 'threads') {
             // v0.7.0：Threads — video / image / carousel 都走 runThreads
-            const thRun = runThreads(job, uploadPath, account, content, postType);
-            results.push(thRun.catch(() => { /* 內部已更新 */ }));
+            run = runThreads(job, uploadPath, account, content, postType);
           } else {
             runUnimplemented(job, platform);
           }
-        }
 
-        await Promise.allSettled(results);
+          if (run) {
+            // 序列等待：一個平台完全結束（含 tunnel 關閉）才進下一個
+            await run.catch(() => { /* 狀態已在 runX 內部更新 */ });
+          }
+
+          // 平台間隔：還有下一個平台且未取消 → 等 30 秒讓 port / socket 完全釋放
+          const hasNext = i < orderedPlatforms.length - 1;
+          if (hasNext && !job.cancelRequested) {
+            console.log(`[publish] ${platform} 完成，等 ${INTER_PLATFORM_DELAY_MS / 1000} 秒釋放 port 後發下一個平台...`);
+            await new Promise<void>((resolve) => setTimeout(resolve, INTER_PLATFORM_DELAY_MS));
+          }
+        }
 
         // 判斷整體狀態
         const allSuccess = job.state.platforms.every(
