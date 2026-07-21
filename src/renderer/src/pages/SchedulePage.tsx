@@ -25,7 +25,7 @@ import {
   Select
 } from '@mantine/core';
 import { DateTimePicker, DatePickerInput, TimeInput } from '@mantine/dates';
-import { Calendar, dayjsLocalizer, Views, type View } from 'react-big-calendar';
+import { Calendar, dayjsLocalizer, Views, type View, type ToolbarProps } from 'react-big-calendar';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-tw';
 import { notifications } from '@mantine/notifications';
@@ -967,6 +967,8 @@ export function SchedulePage() {
   const [watchersModalOpened, setWatchersModalOpened] = useState(false);
   const [autoLaunch, setAutoLaunchState] = useState(false);
   const [view, setView] = useState<View>(Views.MONTH);
+  // v0.9.6：天 / 週 都用 agenda 清單檢視，只差涵蓋天數（1 或 7）
+  const [agendaSpan, setAgendaSpan] = useState<1 | 7>(1);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [openedPost, setOpenedPost] = useState<PostRecord | null>(null);
   const [cancelAllConfirmOpened, setCancelAllConfirmOpened] = useState(false);
@@ -1124,34 +1126,84 @@ export function SchedulePage() {
             events={calendarEvents}
             messages={CALENDAR_MESSAGES}
             culture="zh-tw"
-            // v0.9.5：「天」改用 AGENDA 清單檢視 — 只顯示有排程的時間點，
-            //         不再用 24 小時格線（時間格線的絕對定位在自訂主題下反覆出問題）
-            views={[Views.AGENDA, Views.WEEK, Views.MONTH]}
-            length={1}
+            // v0.9.6：「天」與「週」都改用 AGENDA 清單檢視 — 只顯示有排程的時間點，
+            //         差別只在涵蓋天數（agendaSpan = 1 或 7）。
+            //         24 小時時間格線（DAY / WEEK grid）已完全移除，
+            //         其絕對定位在自訂主題下反覆出問題（v0.9.3 / v0.9.4 兩修無效）。
+            views={[Views.AGENDA, Views.MONTH]}
+            length={agendaSpan}
             view={view}
             onView={(v) => setView(v)}
             date={calendarDate}
             onNavigate={(d) => setCalendarDate(d)}
             defaultView={Views.MONTH}
             popup
-            step={30}
-            timeslots={2}
-            // v0.9.3：時間軸開放全天 00:00-23:59（原限 6:00 起造成部分排程顯示異常），
-            //         且基準日期跟著當前檢視日期走；用 scrollToTime 預設捲到早上 8 點
-            min={dayjs(calendarDate).hour(0).minute(0).second(0).toDate()}
-            max={dayjs(calendarDate).hour(23).minute(59).second(59).toDate()}
-            scrollToTime={dayjs(calendarDate).hour(8).minute(0).toDate()}
+            components={{
+              // v0.9.6：自訂工具列 — 天 / 週 / 月 三顆按鈕（天、週共用 agenda，只換 span）
+              toolbar: (tp: ToolbarProps<CalendarEvent, object>) => {
+                const activeKey =
+                  tp.view === Views.MONTH ? 'month' : agendaSpan === 7 ? 'week' : 'day';
+                return (
+                  <Group justify="space-between" align="center" mb="md" wrap="wrap">
+                    <Group gap={6}>
+                      <Button variant="light" color="walnut" size="xs" onClick={() => tp.onNavigate('TODAY')}>
+                        今天
+                      </Button>
+                      <Button variant="light" color="walnut" size="xs" onClick={() => tp.onNavigate('PREV')}>
+                        ◀
+                      </Button>
+                      <Button variant="light" color="walnut" size="xs" onClick={() => tp.onNavigate('NEXT')}>
+                        ▶
+                      </Button>
+                    </Group>
+                    <Text fw={700} size="md" c="walnut.8">{tp.label}</Text>
+                    <Group gap={6}>
+                      <Button
+                        variant={activeKey === 'day' ? 'filled' : 'light'}
+                        color="mint"
+                        size="xs"
+                        onClick={() => {
+                          setAgendaSpan(1);
+                          tp.onView(Views.AGENDA);
+                        }}
+                      >
+                        天
+                      </Button>
+                      <Button
+                        variant={activeKey === 'week' ? 'filled' : 'light'}
+                        color="mint"
+                        size="xs"
+                        onClick={() => {
+                          setAgendaSpan(7);
+                          tp.onView(Views.AGENDA);
+                        }}
+                      >
+                        週
+                      </Button>
+                      <Button
+                        variant={activeKey === 'month' ? 'filled' : 'light'}
+                        color="mint"
+                        size="xs"
+                        onClick={() => tp.onView(Views.MONTH)}
+                      >
+                        月
+                      </Button>
+                    </Group>
+                  </Group>
+                );
+              }
+            }}
             formats={{
               monthHeaderFormat: 'YYYY 年 M 月',
-              dayHeaderFormat: 'M 月 D 日（dddd）',
-              dayRangeHeaderFormat: ({ start, end }) =>
-                `${dayjs(start).format('M/D')} – ${dayjs(end).format('M/D')}`,
-              timeGutterFormat: 'HH:mm',
-              eventTimeRangeFormat: ({ start }) => dayjs(start).format('HH:mm'),
               agendaTimeFormat: 'HH:mm',
               // v0.9.5：清單只顯示「起始時間點」（不顯示範圍）
               agendaTimeRangeFormat: ({ start }) => dayjs(start).format('HH:mm'),
-              agendaDateFormat: 'M/D（ddd）'
+              agendaDateFormat: 'M/D（ddd）',
+              // 天 = 單日標題；週 = 起訖範圍
+              agendaHeaderFormat: ({ start, end }) =>
+                dayjs(start).isSame(dayjs(end), 'day')
+                  ? dayjs(start).format('M 月 D 日（dddd）')
+                  : `${dayjs(start).format('M/D')} – ${dayjs(end).format('M/D')}`
             }}
             onSelectEvent={(e) => setOpenedPost(e.resource)}
             eventPropGetter={(event) => {
