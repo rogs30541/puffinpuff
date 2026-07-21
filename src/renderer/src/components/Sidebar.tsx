@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Stack, Text, UnstyledButton, Group, Badge } from '@mantine/core';
 import {
   IconSparkles,
@@ -33,6 +34,12 @@ interface SidebarProps {
 }
 
 export function Sidebar({ active, onChange }: SidebarProps) {
+  // v0.9.8：版本號動態抓真實值（原本寫死 v0.1.0）
+  const [version, setVersion] = useState<string>('');
+  useEffect(() => {
+    window.puffin.system.getVersion().then(setVersion).catch(() => {});
+  }, []);
+
   return (
     <Stack gap={4} p="md" h="100%">
       {/* 品牌頭 */}
@@ -42,7 +49,7 @@ export function Sidebar({ active, onChange }: SidebarProps) {
         </Text>
       </Group>
       <Badge variant="light" color="mint" size="sm" mx="xs" mb="sm">
-        v0.1.0 開發中
+        {version ? `v${version}` : '...'}
       </Badge>
 
       {/* 主導覽 */}
