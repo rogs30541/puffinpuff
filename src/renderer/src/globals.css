@@ -191,3 +191,48 @@ button {
   background-color: #E08B97;
   height: 2px;
 }
+
+/* === v0.9.5：agenda 清單檢視（「天」）— 只列有排程的時間點 === */
+.rbc-agenda-view {
+  border: 1px solid #E5DCD3;
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.rbc-agenda-view table.rbc-agenda-table {
+  border: none;
+  font-size: 14px;
+}
+
+.rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  padding: 10px 12px;
+  background: #FBF7F2;
+  color: #7C736B;
+  font-weight: 600;
+  border-bottom: 1px solid #E5DCD3;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  padding: 12px;
+  border-top: 1px solid #F0EAE3;
+  vertical-align: middle;
+}
+
+.rbc-agenda-time-cell {
+  font-weight: 700;
+  color: #6FBF9D;
+  white-space: nowrap;
+}
+
+.rbc-agenda-date-cell {
+  white-space: nowrap;
+  color: #7C736B;
+}
+
+.rbc-agenda-event-cell {
+  cursor: pointer;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr:hover {
+  background: #F5FBF8;
+}

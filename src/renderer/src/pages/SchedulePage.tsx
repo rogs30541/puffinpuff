@@ -100,7 +100,7 @@ const CALENDAR_MESSAGES = {
   month: '月',
   week: '週',
   day: '天',
-  agenda: '議程',
+  agenda: '天', // v0.9.5：agenda 清單檢視取代 24 小時格線當「天」
   date: '日期',
   time: '時間',
   event: '排程',
@@ -1124,7 +1124,10 @@ export function SchedulePage() {
             events={calendarEvents}
             messages={CALENDAR_MESSAGES}
             culture="zh-tw"
-            views={[Views.DAY, Views.WEEK, Views.MONTH]}
+            // v0.9.5：「天」改用 AGENDA 清單檢視 — 只顯示有排程的時間點，
+            //         不再用 24 小時格線（時間格線的絕對定位在自訂主題下反覆出問題）
+            views={[Views.AGENDA, Views.WEEK, Views.MONTH]}
+            length={1}
             view={view}
             onView={(v) => setView(v)}
             date={calendarDate}
@@ -1146,7 +1149,9 @@ export function SchedulePage() {
               timeGutterFormat: 'HH:mm',
               eventTimeRangeFormat: ({ start }) => dayjs(start).format('HH:mm'),
               agendaTimeFormat: 'HH:mm',
-              agendaDateFormat: 'M/D ddd'
+              // v0.9.5：清單只顯示「起始時間點」（不顯示範圍）
+              agendaTimeRangeFormat: ({ start }) => dayjs(start).format('HH:mm'),
+              agendaDateFormat: 'M/D（ddd）'
             }}
             onSelectEvent={(e) => setOpenedPost(e.resource)}
             eventPropGetter={(event) => {
