@@ -154,6 +154,8 @@ const api: PuffinAPI = {
       ipcRenderer.invoke('system:listMetaUserTokens') as Promise<MetaUserTokenInfo[]>,
     refreshMetaTokens: () =>
       ipcRenderer.invoke('system:refreshMetaTokens') as Promise<MetaTokenRefreshResult[]>,
+    deleteMetaUserToken: (fbUserId: string) =>
+      ipcRenderer.invoke('system:deleteMetaUserToken', fbUserId) as Promise<boolean>,
     getAutoLaunchPermanentlyDisabled: () =>
       ipcRenderer.invoke('system:getAutoLaunchPermanentlyDisabled') as Promise<boolean>,
     setAutoLaunchPermanentlyDisabled: (value: boolean) =>

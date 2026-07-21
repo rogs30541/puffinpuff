@@ -743,6 +743,8 @@ export interface PuffinAPI {
     listMetaUserTokens(): Promise<MetaUserTokenInfo[]>;
     /** v0.2.7：立即強制執行 Meta token refresh */
     refreshMetaTokens(): Promise<MetaTokenRefreshResult[]>;
+    /** v0.9.7：刪除無用的 Meta user token（換密碼/重連後留下的失效舊列）*/
+    deleteMetaUserToken(fbUserId: string): Promise<boolean>;
     /** v0.3.3：取得「永久停用 AutoLaunch 自動保護」狀態 */
     getAutoLaunchPermanentlyDisabled(): Promise<boolean>;
     /** v0.3.3：設定永久停用狀態 */

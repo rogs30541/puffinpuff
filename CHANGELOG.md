@@ -4,6 +4,21 @@
 
 ---
 
+## v0.9.7 — 2026-07-21 — Meta token 清理功能
+
+### 🎯 情境
+同一個 FB 使用者換密碼 / 重新連結後，「Meta 連線自動續期」會留下失效的舊 token 列
+（每 24 小時 refresh 都報錯 "The session has been invalidated because the user changed
+their password..."），無法移除、永遠佔版面 + 一直報錯。
+
+### 🔧 變更
+- 每筆 token 卡片右側新增「🗑 刪除」按鈕（含確認對話框）
+- 只移除自動續期的追蹤紀錄，**不影響已連線的 FB / IG 帳號**
+- 新 IPC：`system:deleteMetaUserToken(fbUserId)`
+- 刪除後列表即時更新
+
+---
+
 ## v0.9.6 — 2026-07-21 — 「週」檢視一併改清單邏輯
 
 ### 🎯 變更

@@ -621,6 +621,29 @@ export function SettingsPage() {
                           </Text>
                         )}
                       </Stack>
+                      {/* v0.9.7：清理無用 token（換密碼/重連後留下的失效舊列）*/}
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        onClick={async () => {
+                          if (!confirm(
+                            `確定刪除「${t.fbUserName ?? t.fbUserId}」這筆 user token？\n\n` +
+                            `只會移除自動續期追蹤紀錄，不影響已連線的 FB / IG 帳號。\n` +
+                            `（適用於換密碼 / 重連後留下的失效舊列）`
+                          )) return;
+                          try {
+                            await window.puffin.system.deleteMetaUserToken(t.fbUserId);
+                            notifications.show({ title: '已刪除 token 紀錄', message: '', color: 'mint' });
+                            const list = await window.puffin.system.listMetaUserTokens();
+                            setMetaTokens(list);
+                          } catch (e) {
+                            notifications.show({ title: '刪除失敗', message: (e as Error).message, color: 'red' });
+                          }
+                        }}
+                      >
+                        🗑 刪除
+                      </Button>
                     </Group>
                   </Card>
                 );

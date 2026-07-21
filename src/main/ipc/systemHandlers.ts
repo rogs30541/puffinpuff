@@ -10,7 +10,7 @@ import {
 import { execute, query } from '../lib/database';
 import { listPosts } from '../lib/postsRepo';
 import { readLastGcResult, runCacheGc, type GcRunResult } from '../lib/cacheGc';
-import { listAllMetaUserTokens, type MetaUserTokenPublic } from '../lib/metaUserTokens';
+import { listAllMetaUserTokens, deleteMetaUserToken, type MetaUserTokenPublic } from '../lib/metaUserTokens';
 import { runMetaTokenRefresh } from '../lib/metaTokenRefresher';
 import { redownloadCloudflared } from '../lib/tunnel';
 
@@ -137,6 +137,12 @@ export function registerSystemHandlers(): void {
   ipcMain.handle('system:listMetaUserTokens', (): MetaUserTokenPublic[] => listAllMetaUserTokens());
   ipcMain.handle('system:refreshMetaTokens', async () => {
     return await runMetaTokenRefresh({ force: true });
+  });
+  // v0.9.7：清理無用 token（同 FB user 換密碼/重連後留下的失效舊列）
+  ipcMain.handle('system:deleteMetaUserToken', (_e, fbUserId: string): boolean => {
+    deleteMetaUserToken(fbUserId);
+    console.log(`[meta-tokens] deleted user token fb_user_id=${fbUserId}`);
+    return true;
   });
 
   // === v0.4.0：匯出歷史紀錄 CSV ===
