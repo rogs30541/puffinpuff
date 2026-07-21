@@ -109,12 +109,54 @@ button {
   background: #FBF7F2;
 }
 
-.rbc-month-view,
-.rbc-time-view,
-.rbc-time-header {
+.rbc-month-view {
   border: 1px solid #E5DCD3;
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* v0.9.4：日/週檢視（time-view）不可用 overflow:hidden —
+   會破壞 rbc 內部的捲動容器與事件絕對定位（事件被黏在容器底部、晚間時段捲不到）。
+   改用 clip 只裁圓角，並強制還原 rbc 標準的定位/捲動規則。 */
+.rbc-time-view {
+  border: 1px solid #E5DCD3;
+  border-radius: 12px;
+  overflow: clip;
+}
+
+.rbc-time-view .rbc-time-header {
+  border: none;
+  border-bottom: 1px solid #E5DCD3;
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* 時間格內容：唯一的垂直捲動容器（涵蓋 00:00-23:59 全天）*/
+.rbc-time-content {
+  overflow-y: auto !important;
+  flex: 1 0 0% !important;
+}
+
+/* 事件定位鏈：day column → events container → event 的絕對定位不可被打斷 */
+.rbc-time-column {
+  position: relative;
+}
+
+.rbc-day-slot {
+  position: relative;
+}
+
+.rbc-day-slot .rbc-events-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin-right: 10px;
+}
+
+.rbc-day-slot .rbc-event {
+  position: absolute;
 }
 
 .rbc-today {

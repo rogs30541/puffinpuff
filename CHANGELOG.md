@@ -4,6 +4,30 @@
 
 ---
 
+## v0.9.4 — 2026-07-20 — 排程日/週檢視根因修正（CSS overflow 破壞 rbc 定位）
+
+### 🎯 真正的根因（v0.9.3 沒修到）
+`globals.css` 的馬卡龍主題把 `overflow: hidden` 同時蓋到
+`.rbc-month-view / .rbc-time-view / .rbc-time-header` 三個容器上。
+月檢視沒事，但**日/週檢視（time-view）的內部結構被破壞**：
+- 事件的絕對定位鏈（day column → events container → event）被打斷
+- 事件全部被「黏」在容器底部疊成一條橫列，跟實際時段脫鉤
+- 捲動範圍異常，晚間 18:00-21:00 排程永遠看不到
+
+### 🩹 修正
+- `.rbc-time-view` 改用 `overflow: clip`（只裁圓角、不干擾內部定位）
+- `.rbc-time-header` 拆出獨立規則（無 overflow hidden）
+- 強制還原 rbc 標準規則：
+  - `.rbc-time-content` = 唯一垂直捲動容器（`overflow-y: auto` + `flex: 1`）
+  - `.rbc-time-column` / `.rbc-day-slot` = `position: relative`
+  - `.rbc-events-container` = `position: absolute; inset: 0`
+  - `.rbc-day-slot .rbc-event` = `position: absolute`
+
+### 結果
+日/週檢視事件回到正確時段位置、全天 00:00-23:59 可完整捲動（搭配 v0.9.3 的自適應高度 + 預設捲到 8:00）。
+
+---
+
 ## v0.9.3 — 2026-07-20 — 排程月曆卷軸修正（晚間排程看不到）
 
 ### 🐛 症狀
