@@ -1117,7 +1117,8 @@ export function SchedulePage() {
       </Alert>
 
       <Card padding={0} style={{ overflow: 'hidden' }}>
-        <div style={{ height: 720 }}>
+        {/* v0.9.3：高度改隨視窗自適應（原寫死 720px 導致日/週檢視晚間排程被切掉看不到）*/}
+        <div style={{ height: 'calc(100vh - 230px)', minHeight: 640 }}>
           <Calendar
             localizer={localizer}
             events={calendarEvents}
@@ -1132,8 +1133,11 @@ export function SchedulePage() {
             popup
             step={30}
             timeslots={2}
-            min={dayjs().hour(6).minute(0).toDate()}
-            max={dayjs().hour(23).minute(59).toDate()}
+            // v0.9.3：時間軸開放全天 00:00-23:59（原限 6:00 起造成部分排程顯示異常），
+            //         且基準日期跟著當前檢視日期走；用 scrollToTime 預設捲到早上 8 點
+            min={dayjs(calendarDate).hour(0).minute(0).second(0).toDate()}
+            max={dayjs(calendarDate).hour(23).minute(59).second(59).toDate()}
+            scrollToTime={dayjs(calendarDate).hour(8).minute(0).toDate()}
             formats={{
               monthHeaderFormat: 'YYYY 年 M 月',
               dayHeaderFormat: 'M 月 D 日（dddd）',
