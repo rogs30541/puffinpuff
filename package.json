@@ -1,7 +1,7 @@
 {
   "name": "puffinpuff",
   "productName": "海鸚泡芙 PuffinPuff",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "一次發布到 YouTube Shorts、FB Reels、IG Reels 的桌面工具",
   "main": "./out/main/index.js",
   "author": "VVLEE",

@@ -622,7 +622,39 @@ export function HistoryPage({ onLoadDraft }: HistoryPageProps = {}) {
             每一次飛行的足跡與連結。
           </Text>
         </div>
-        {loading && <Loader size="sm" color="mint" />}
+        <Group gap="sm">
+          {loading && <Loader size="sm" color="mint" />}
+          {/* v0.9.9：清空歷史（保留尚未發布的排程）*/}
+          {posts.length > 0 && (
+            <Button
+              variant="light"
+              color="red"
+              size="xs"
+              leftSection={<IconTrash size={14} />}
+              onClick={async () => {
+                if (!confirm(
+                  `確定要清空所有歷史紀錄嗎？（共 ${posts.length} 筆）\n\n` +
+                  `⚠ 此動作不可復原。\n` +
+                  `「已排程、尚未發布」的項目會保留，其餘（成功 / 失敗 / 草稿）全部刪除。\n` +
+                  `已發布到平台上的內容不受影響。`
+                )) return;
+                try {
+                  const deleted = await window.puffin.system.clearHistory();
+                  notifications.show({
+                    title: '歷史已清空',
+                    message: `刪除了 ${deleted} 筆紀錄（排程中的項目已保留）`,
+                    color: 'mint'
+                  });
+                  await refresh();
+                } catch (e) {
+                  notifications.show({ title: '清空失敗', message: (e as Error).message, color: 'red' });
+                }
+              }}
+            >
+              清空歷史
+            </Button>
+          )}
+        </Group>
       </Group>
 
       <SegmentedControl
