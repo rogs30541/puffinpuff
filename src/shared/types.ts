@@ -3,13 +3,13 @@ export type Platform = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tikto
 /**
  * v0.7.3 Feature flags — UI 顯露控制（底層 code 不動，純 UI 開關）
  *
- *  - THREADS_UI_ENABLED：v0.9.10 重新開啟 — App Review 需要錄影示範
- *    threads_basic / threads_content_publish 的實際操作流程。
- *    （v0.7.3 曾因 Threads OAuth 在 Dev mode 卡授權鏈而暫關；
- *      現在商家驗證已通過 + 時隔數月 Meta propagation 已完成，重新開放測試）
+ *  - THREADS_UI_ENABLED：v0.9.11 確定關閉 — 2026-10 App Review 決策：
+ *    Threads 權限全部退出本次審查（threads_basic / threads_content_publish /
+ *    threads_manage_insights 皆已從提交中移除），先專注 FB/IG 上線。
+ *    底層 adapter / OAuth / IPC / DB schema 保留，日後要重啟翻 true 即可。
  */
 export const FEATURE_FLAGS = {
-  THREADS_UI_ENABLED: true
+  THREADS_UI_ENABLED: false
 } as const;
 
 /**

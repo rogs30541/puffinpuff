@@ -4,6 +4,27 @@
 
 ---
 
+## v0.9.11 — 2026-10-03 — Threads 全面退出本次 App Review
+
+### 🎯 決策
+Threads 功能與權限全部退出本次審查，先專注 FB / IG 上線：
+- App Review 提交中移除 `threads_basic`、`threads_content_publish`
+  （加上前次移除的 `threads_manage_insights`，threads 權限已全數退出）
+- Meta 後台的「存取 Threads API」使用案例無法刪除（新版後台無此入口、
+  必要權限不可單獨移除），但它處於未申請狀態，不影響審核與上線
+- `THREADS_UI_ENABLED` 關回 false（v0.9.10 短暫開啟過）
+- 拍攝腳本 v2：移除 Threads 場景，審查影片只需 4 個場景（3-5 分鐘）
+
+### 📋 本次送審權限（8 個，全 FB/IG）
+pages_manage_posts / pages_read_engagement / pages_show_list /
+instagram_basic / instagram_content_publish / business_management /
+public_profile / Business Asset User Profile Access
+
+### 底層保留
+threadsAdapter / threadsOAuth / IPC / DB schema 不動，日後翻 flag 即可重啟。
+
+---
+
 ## v0.9.10 — 2026-10-03 — 重新開啟 Threads UI（App Review 錄影需要）
 
 ### 🎯 背景
