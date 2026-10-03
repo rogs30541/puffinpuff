@@ -4,6 +4,32 @@
 
 ---
 
+## v0.9.10 — 2026-10-03 — 重新開啟 Threads UI（App Review 錄影需要）
+
+### 🎯 背景
+Meta App Review 提交進行中（2026-10-03）：
+- 商家與存取權驗證已通過（李白廬商行）
+- 10 個權限的用途說明已填寫完成
+- 資料處理問卷完成、網站平台已新增
+- 已從提交中移除未使用的 instagram_manage_messages 與未實作的 threads_manage_insights
+
+審核需要螢幕錄影示範 threads_basic / threads_content_publish 的實際操作，
+因此重新開啟 v0.7.3 關閉的 Threads UI。
+
+### 🔧 變更
+- `FEATURE_FLAGS.THREADS_UI_ENABLED`：false → **true**
+  （帳號頁 Threads 卡片、發布頁 Threads chip / 分頁恢復顯示）
+- 新增 `審查錄影/` 資料夾：
+  - `開始錄影.bat` — 用內建 ffmpeg 錄全螢幕（15fps、按 q 停止）
+  - `拍攝腳本.md` — App Review 示範影片逐場景拍攝指引
+
+### ⚠ Threads OAuth 注意
+v0.7.x 時 Threads OAuth 曾卡在「登入後跳首頁」。現在商家驗證已通過 +
+Meta 端 propagation 時隔數月應已完成，本版重新開放測試；若仍卡住，
+就把 threads 兩權限也從本次 App Review 移除，待日後補申請。
+
+---
+
 ## v0.9.9 — 2026-07-21 — 歷史頁加「清空歷史」按鈕
 
 ### 🔧 變更

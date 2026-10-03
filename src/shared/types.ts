@@ -3,12 +3,13 @@ export type Platform = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tikto
 /**
  * v0.7.3 Feature flags — UI 顯露控制（底層 code 不動，純 UI 開關）
  *
- *  - THREADS_UI_ENABLED：Threads OAuth 在 Dev mode 仍卡在 Meta 端授權鏈
- *    （登入後跳 threads.net 首頁、不出同意頁），暫時關閉 UI 入口避免使用者誤觸。
- *    底層 adapter / IPC / DB schema 保留，未來 Meta App 通過 review 後翻 true 即可。
+ *  - THREADS_UI_ENABLED：v0.9.10 重新開啟 — App Review 需要錄影示範
+ *    threads_basic / threads_content_publish 的實際操作流程。
+ *    （v0.7.3 曾因 Threads OAuth 在 Dev mode 卡授權鏈而暫關；
+ *      現在商家驗證已通過 + 時隔數月 Meta propagation 已完成，重新開放測試）
  */
 export const FEATURE_FLAGS = {
-  THREADS_UI_ENABLED: false
+  THREADS_UI_ENABLED: true
 } as const;
 
 /**
