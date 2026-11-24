@@ -78,6 +78,7 @@ interface PlatformCardProps {
   accounts: AccountPublic[];
   onConnect: () => void;
   onDisconnect: (id: number) => void;
+  onDisconnectAll: () => void;
   onTestConnection: (id: number) => void;
   onDebugMetaToken: (id: number) => void;
   testingId: number | null;
@@ -89,6 +90,7 @@ function PlatformCard({
   accounts,
   onConnect,
   onDisconnect,
+  onDisconnectAll,
   onTestConnection,
   onDebugMetaToken,
   testingId,
@@ -106,9 +108,24 @@ function PlatformCard({
             <Title order={4}>{def.name}</Title>
           </Group>
           {hasAccount ? (
-            <Badge color="mint" variant="light" size="sm" leftSection={<IconCheck size={12} />}>
-              已連線 {accounts.length > 1 ? `×${accounts.length}` : ''}
-            </Badge>
+            <Group gap={6} wrap="nowrap">
+              <Badge color="mint" variant="light" size="sm" leftSection={<IconCheck size={12} />}>
+                已連線 {accounts.length > 1 ? `×${accounts.length}` : ''}
+              </Badge>
+              {accounts.length > 1 && (
+                <Tooltip label="一次解除此平台所有帳號的連線">
+                  <Button
+                    variant="subtle"
+                    color="red"
+                    size="xs"
+                    onClick={onDisconnectAll}
+                    leftSection={<IconLinkOff size={12} />}
+                  >
+                    全部解綁
+                  </Button>
+                </Tooltip>
+              )}
+            </Group>
           ) : (
             <Badge color="walnut" variant="light" size="sm">未連線</Badge>
           )}
@@ -307,6 +324,32 @@ export function AccountsPage() {
     }
   };
 
+  // v0.9.13：逐平台全部解綁（重做 OAuth 前不用一顆一顆點）
+  const handleDisconnectAll = async (accts: AccountPublic[]) => {
+    if (accts.length === 0) return;
+    const confirmed = window.confirm(
+      `確定要一次解除這 ${accts.length} 個帳號的連線嗎？\n（之後按「連線」重新授權即可全部接回來）`
+    );
+    if (!confirmed) return;
+    let ok = 0;
+    let fail = 0;
+    for (const a of accts) {
+      try {
+        await window.puffin.accounts.disconnect(a.id);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    notifications.show({
+      title: '全部解綁完成',
+      message: `已解除 ${ok} 個帳號${fail > 0 ? `，${fail} 個失敗` : ''}`,
+      color: fail > 0 ? 'yellow' : 'mint',
+      icon: <IconCheck size={18} />
+    });
+    await refresh();
+  };
+
   // v0.4.4：測試連線
   const handleDebugMetaToken = async (id: number) => {
     try {
@@ -409,6 +452,7 @@ export function AccountsPage() {
               accounts={platformAccounts}
               onConnect={onConnect}
               onDisconnect={handleDisconnect}
+              onDisconnectAll={() => handleDisconnectAll(platformAccounts)}
               onTestConnection={handleTestConnection}
               onDebugMetaToken={handleDebugMetaToken}
               testingId={testingId}
