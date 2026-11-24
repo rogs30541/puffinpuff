@@ -353,6 +353,23 @@ function applySchema(database: Database): void {
       Date.now()
     ]);
   }
+
+  if (currentVersion < 13) {
+    // v13：v0.9.14 FB 粉專層級互動資料
+    //   新版粉絲專頁（NPE）在 app 未過審（開發模式）時，貼文層級的讚數 API 一律回 (#10)；
+    //   pages_read_engagement 開發模式下可讀的是粉專層級 fan_count / followers_count，
+    //   故 post_targets 加兩欄存「抓取當下的粉專粉絲數／追蹤數」。
+    database.run(`
+      ALTER TABLE post_targets ADD COLUMN page_fans INTEGER;
+    `);
+    database.run(`
+      ALTER TABLE post_targets ADD COLUMN page_followers INTEGER;
+    `);
+    execute('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)', [
+      13,
+      Date.now()
+    ]);
+  }
 }
 
 export function getDatabase(): Database {

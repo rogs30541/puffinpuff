@@ -4,6 +4,25 @@
 
 ---
 
+## v0.9.14 — 2026-11-25 — FB 數據改抓粉專層級（開發模式 NPE 限制的正解）
+
+### 🔍 根因（Graph API Explorer 逐欄位實測）
+新版粉絲專頁（NPE）＋ app 未過審（開發模式）時，與 token / granular / BM 角色無關：
+- 貼文層級 `likes.summary` → 一律 (#10)，需 Advanced Access（審核通過後才開）
+- `comments` / `reactions` → (#10) 需 `pages_read_user_content`（本 app 未申請）
+- 粉專層級 `fan_count` / `followers_count` → `pages_read_engagement` 開發模式即可讀 ✅
+（用戶/粉專 token、v18/v25、granular 全空、BM 完整管理權限皆驗證過）
+
+### ✨ 變更
+- `fetchFacebookStats`：貼文層級盡力而為（(#10) 不再當錯誤寫進 statsError；
+  過審後讚數自動恢復）；一律補抓粉專 `fan_count`/`followers_count`
+- DB v13：`post_targets` 加 `page_fans`、`page_followers`
+- 歷史頁 FB 卡片顯示「👥 粉專粉絲」「👣 追蹤」（真實非零數字，審查錄影可用）
+- 抓取完成提示不再誤導（有拿到任何數據就不顯示「可能無 insights 權限」）
+- 移除已失效的 `post_impressions` insights 呼叫與 `reactions` 欄位
+
+---
+
 ## v0.9.13 — 2026-11-25 — 帳號頁「全部解綁」
 
 ### ✨ 新增

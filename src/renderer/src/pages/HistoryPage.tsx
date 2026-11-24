@@ -255,9 +255,22 @@ function PostDetail({ post, onClose, onRepublish, onReschedule, onLoadDraft }: P
       const updatedTargets = await window.puffin.posts.fetchStats(post.id) as PostTargetRecord[];
       setLivePost({ ...livePost, targets: updatedTargets });
       const total = updatedTargets.reduce((acc, t) => acc + (t.views ?? t.reach ?? 0), 0);
+      const gotAny = updatedTargets.some(
+        (t) =>
+          (t.likesCount ?? null) !== null ||
+          (t.commentsCount ?? null) !== null ||
+          (t.pageFans ?? null) !== null ||
+          (t.views ?? null) !== null ||
+          (t.reach ?? null) !== null
+      );
       notifications.show({
         title: '已抓取數據',
-        message: total > 0 ? `總觸及 ${total.toLocaleString()}` : '抓取完成（部分平台可能無 insights 權限）',
+        message:
+          total > 0
+            ? `總觸及 ${total.toLocaleString()}`
+            : gotAny
+              ? '抓取完成'
+              : '抓取完成（部分平台可能無 insights 權限）',
         color: 'mint',
         icon: <IconCheck size={18} />
       });
@@ -437,7 +450,9 @@ function PostDetail({ post, onClose, onRepublish, onReschedule, onLoadDraft }: P
                 t.views !== null && t.views !== undefined ||
                 t.likesCount !== null && t.likesCount !== undefined ||
                 t.commentsCount !== null && t.commentsCount !== undefined ||
-                t.reach !== null && t.reach !== undefined;
+                t.reach !== null && t.reach !== undefined ||
+                t.pageFans !== null && t.pageFans !== undefined ||
+                t.pageFollowers !== null && t.pageFollowers !== undefined;
               return (
                 <Card key={t.platform} padding="md">
                   <Group justify="space-between">
@@ -494,6 +509,18 @@ function PostDetail({ post, onClose, onRepublish, onReschedule, onLoadDraft }: P
                         <div>
                           <Text size="xs" c="dimmed">🔄 分享</Text>
                           <Text size="sm" fw={600}>{t.sharesCount!.toLocaleString()}</Text>
+                        </div>
+                      )}
+                      {(t.pageFans ?? null) !== null && (
+                        <div>
+                          <Text size="xs" c="dimmed">👥 粉專粉絲</Text>
+                          <Text size="sm" fw={600}>{t.pageFans!.toLocaleString()}</Text>
+                        </div>
+                      )}
+                      {(t.pageFollowers ?? null) !== null && (
+                        <div>
+                          <Text size="xs" c="dimmed">👣 追蹤</Text>
+                          <Text size="sm" fw={600}>{t.pageFollowers!.toLocaleString()}</Text>
                         </div>
                       )}
                       {t.statsFetchedAt && (

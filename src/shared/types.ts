@@ -303,6 +303,9 @@ export interface PostTargetRecord {
   commentsCount?: number | null;
   sharesCount?: number | null;
   reach?: number | null;
+  /** v0.9.14：FB 粉專層級互動資料（開發模式下貼文讚數 API 鎖死時的替代顯示） */
+  pageFans?: number | null;
+  pageFollowers?: number | null;
   statsFetchedAt?: number | null;
   statsError?: string | null;
 }

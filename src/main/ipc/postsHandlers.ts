@@ -88,6 +88,8 @@ export function registerPostsHandlers(): void {
             commentsCount: stats.commentsCount,
             sharesCount: stats.sharesCount,
             reach: stats.reach,
+            pageFans: stats.pageFans ?? null,
+            pageFollowers: stats.pageFollowers ?? null,
             statsError: null
           });
         } catch (e) {

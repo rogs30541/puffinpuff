@@ -19,6 +19,9 @@ export interface PostStats {
   commentsCount: number | null;
   sharesCount: number | null;
   reach: number | null;
+  /** v0.9.14：FB 粉專層級互動資料（NPE + 開發模式下貼文層級讚數鎖死時的替代） */
+  pageFans?: number | null;
+  pageFollowers?: number | null;
 }
 
 interface GoogleCredentials {
@@ -79,50 +82,83 @@ export async function fetchFacebookStats(accountId: number, postId: string): Pro
   if (!accessToken) throw new Error('FB token 不存在');
   const { api_version: apiVersion } = loadMetaCreds();
 
-  // postId 格式：可能是 「pageId_postId」 或 「video_id」 對 Reels
-  // 簡化：先嘗試 /{postId}?fields=...，失敗則 try insights
+  // v0.9.14 實測結論（Graph API Explorer 逐欄位驗證）：
+  //   新版粉絲專頁（NPE）＋ app 未過審（開發模式）時：
+  //   - 貼文層級 likes.summary → (#10) 需 Advanced Access（過審後才通）
+  //   - comments / reactions → (#10) 需 pages_read_user_content（本 app 未申請）
+  //   - 粉專層級 fan_count / followers_count → pages_read_engagement 開發模式即可讀 ✅
+  //   策略：貼文層級盡力而為（過審後自動恢復），#10 不視為錯誤；
+  //         一律補抓粉專層級數據，兩者都失敗才丟錯。
+  let likes: number | null = null;
+  let comments: number | null = null;
+  let shares: number | null = null;
+  let postLevelError: string | null = null;
+
   try {
     const { data } = await axios.get(`https://graph.facebook.com/${apiVersion}/${postId}`, {
       params: {
-        fields: 'likes.summary(true).limit(0),comments.summary(true).limit(0),shares,reactions.summary(true).limit(0)',
+        fields: 'likes.summary(true).limit(0),comments.summary(true).limit(0),shares',
         access_token: accessToken
       }
     });
-    const likes = data.likes?.summary?.total_count ?? data.reactions?.summary?.total_count ?? null;
-    const comments = data.comments?.summary?.total_count ?? null;
-    const shares = data.shares?.count ?? null;
+    likes = data.likes?.summary?.total_count ?? null;
+    comments = data.comments?.summary?.total_count ?? null;
+    shares = data.shares?.count ?? null;
+  } catch (e) {
+    if (e instanceof AxiosError && e.response) {
+      const code = (e.response.data as { error?: { code?: number } })?.error?.code;
+      if (code !== 10) {
+        postLevelError = JSON.stringify(e.response.data).slice(0, 200);
+      }
+      // (#10)＝開發模式 NPE 限制，預期內，不當錯誤
+    } else {
+      throw e;
+    }
+  }
 
-    // 嘗試 insights 拿 reach（reach 是 Reels 才有，普通貼文是 post_impressions）
-    let reach: number | null = null;
+  // 粉專層級：fan_count / followers_count（pages_read_engagement 的開發模式可用範圍）
+  let pageFans: number | null = null;
+  let pageFollowers: number | null = null;
+  const account = getAccountById(accountId);
+  if (account?.externalId) {
     try {
-      const { data: ins } = await axios.get(
-        `https://graph.facebook.com/${apiVersion}/${postId}/insights`,
+      const { data: pageData } = await axios.get(
+        `https://graph.facebook.com/${apiVersion}/${account.externalId}`,
         {
           params: {
-            metric: 'post_impressions',
+            fields: 'fan_count,followers_count',
             access_token: accessToken
           }
         }
       );
-      const m = ins.data?.[0]?.values?.[0]?.value;
-      if (typeof m === 'number') reach = m;
-    } catch {
-      /* 沒有 insights 權限 → null */
+      pageFans = pageData.fan_count ?? null;
+      pageFollowers = pageData.followers_count ?? null;
+    } catch (e) {
+      if (postLevelError === null && likes === null && comments === null) {
+        // 貼文層級與粉專層級都拿不到 → 回報粉專層級的錯誤
+        if (e instanceof AxiosError && e.response) {
+          throw new Error(
+            `FB stats fetch failed: ${JSON.stringify(e.response.data).slice(0, 200)}`
+          );
+        }
+        throw e;
+      }
     }
-
-    return {
-      views: null,
-      likesCount: likes,
-      commentsCount: comments,
-      sharesCount: shares,
-      reach
-    };
-  } catch (e) {
-    if (e instanceof AxiosError && e.response) {
-      throw new Error(`FB stats fetch failed: ${JSON.stringify(e.response.data).slice(0, 200)}`);
-    }
-    throw e;
   }
+
+  if (postLevelError && pageFans === null && pageFollowers === null) {
+    throw new Error(`FB stats fetch failed: ${postLevelError}`);
+  }
+
+  return {
+    views: null,
+    likesCount: likes,
+    commentsCount: comments,
+    sharesCount: shares,
+    reach: null,
+    pageFans,
+    pageFollowers
+  };
 }
 
 /** Instagram 數據 */

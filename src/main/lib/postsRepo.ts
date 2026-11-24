@@ -42,6 +42,8 @@ interface TargetRow {
   comments_count: number | null;
   shares_count: number | null;
   reach: number | null;
+  page_fans: number | null;
+  page_followers: number | null;
   stats_fetched_at: number | null;
   stats_error: string | null;
 }
@@ -62,6 +64,8 @@ function toTarget(row: TargetRow): PostTargetRecord {
     commentsCount: row.comments_count,
     sharesCount: row.shares_count,
     reach: row.reach,
+    pageFans: row.page_fans,
+    pageFollowers: row.page_followers,
     statsFetchedAt: row.stats_fetched_at,
     statsError: row.stats_error
   };
@@ -271,6 +275,8 @@ export interface UpdateTargetStatsInput {
   commentsCount?: number | null;
   sharesCount?: number | null;
   reach?: number | null;
+  pageFans?: number | null;
+  pageFollowers?: number | null;
   statsError?: string | null;
 }
 
@@ -282,6 +288,8 @@ export function updateTargetStats(input: UpdateTargetStatsInput): void {
       comments_count = ?,
       shares_count = ?,
       reach = ?,
+      page_fans = ?,
+      page_followers = ?,
       stats_fetched_at = ?,
       stats_error = ?
     WHERE post_id = ? AND platform = ?`,
@@ -291,6 +299,8 @@ export function updateTargetStats(input: UpdateTargetStatsInput): void {
       input.commentsCount ?? null,
       input.sharesCount ?? null,
       input.reach ?? null,
+      input.pageFans ?? null,
+      input.pageFollowers ?? null,
       Date.now(),
       input.statsError ?? null,
       input.postId,
