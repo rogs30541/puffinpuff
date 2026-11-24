@@ -5,9 +5,10 @@ import {
   deletePost as repoDeletePost,
   getPost,
   listPosts,
+  setTargetRemoteId,
   updateTargetStats
 } from '../lib/postsRepo';
-import { fetchStatsForTarget } from '../lib/statsCollector';
+import { backfillRemoteIdFromUrl, fetchStatsForTarget } from '../lib/statsCollector';
 import type { PostRecord, PostStatus, PostTargetRecord, SaveDraftArgs } from '../../shared/types';
 
 export function registerPostsHandlers(): void {
@@ -59,11 +60,26 @@ export function registerPostsHandlers(): void {
       const post = getPost(postId);
       if (!post) throw new Error(`找不到 post #${postId}`);
       for (const target of post.targets) {
-        if (target.status !== 'success' || !target.remoteId || !target.accountId) {
+        if (target.status !== 'success' || !target.accountId) {
           continue;
         }
+        // v0.9.12：舊版發布沒存 remote_id → 從貼文網址回填一次
+        let remoteId = target.remoteId;
+        if (!remoteId && target.remoteUrl) {
+          try {
+            remoteId = await backfillRemoteIdFromUrl(
+              target.platform,
+              target.accountId,
+              target.remoteUrl
+            );
+            if (remoteId) setTargetRemoteId(postId, target.platform, remoteId);
+          } catch {
+            remoteId = null;
+          }
+        }
+        if (!remoteId) continue;
         try {
-          const stats = await fetchStatsForTarget(target.platform, target.accountId, target.remoteId);
+          const stats = await fetchStatsForTarget(target.platform, target.accountId, remoteId);
           updateTargetStats({
             postId,
             platform: target.platform,
@@ -75,7 +91,7 @@ export function registerPostsHandlers(): void {
             statsError: null
           });
         } catch (e) {
-          console.warn(`[stats] ${target.platform} ${target.remoteId} fetch failed:`, (e as Error).message);
+          console.warn(`[stats] ${target.platform} ${remoteId} fetch failed:`, (e as Error).message);
           updateTargetStats({
             postId,
             platform: target.platform,

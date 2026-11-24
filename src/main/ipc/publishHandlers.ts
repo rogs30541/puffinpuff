@@ -124,6 +124,7 @@ function updatePlatform(
         postId: job.postId,
         platform,
         status: targetStatus,
+        remoteId: patch.remoteId ?? null,
         remoteUrl: patch.url ?? null,
         errorMessage: patch.error ?? null
       });
@@ -174,7 +175,8 @@ async function runYouTube(
     updatePlatform(job, 'youtube', {
       status: 'success',
       percent: 100,
-      url: result.url
+      url: result.url,
+      remoteId: result.videoId
     });
   } catch (e) {
     updatePlatform(job, 'youtube', {
@@ -224,7 +226,8 @@ async function runFacebook(
     updatePlatform(job, 'facebook', {
       status: 'success',
       percent: 100,
-      url: result.url
+      url: result.url,
+      remoteId: result.videoId
     });
   } catch (e) {
     updatePlatform(job, 'facebook', {
@@ -274,7 +277,8 @@ async function runInstagram(
     updatePlatform(job, 'instagram', {
       status: 'success',
       percent: 100,
-      url: result.url
+      url: result.url,
+      remoteId: result.mediaId
     });
   } catch (e) {
     updatePlatform(job, 'instagram', {
@@ -313,7 +317,8 @@ async function runFacebookPhoto(
     updatePlatform(job, 'facebook', {
       status: 'success',
       percent: 100,
-      url: result.url
+      url: result.url,
+      remoteId: result.postId
     });
   } catch (e) {
     updatePlatform(job, 'facebook', {
@@ -359,7 +364,8 @@ async function runInstagramImage(
       updatePlatform(job, 'instagram', {
         status: 'success',
         percent: 100,
-        url: result.url
+        url: result.url,
+        remoteId: result.mediaId
       });
     } else {
       const result = await publishImagePost(
@@ -381,7 +387,8 @@ async function runInstagramImage(
       updatePlatform(job, 'instagram', {
         status: 'success',
         percent: 100,
-        url: result.url
+        url: result.url,
+        remoteId: result.mediaId
       });
     }
   } catch (e) {
@@ -441,7 +448,8 @@ async function runThreads(
     updatePlatform(job, 'threads', {
       status: 'success',
       percent: 100,
-      url: result.url
+      url: result.url,
+      remoteId: result.mediaId
     });
     // 觸發未用變數警告壓制（usingMedia 暫保留給未來 TEXT-only 條件分支）
     void usingMedia;

@@ -4,6 +4,29 @@
 
 ---
 
+## v0.9.12 — 2026-11-24 — 修復「抓取數據」永遠沒有數字
+
+### 🐛 修復
+- **發布管線從未儲存平台資源 ID（remote_id）**：所有 adapter 都有回傳
+  YT videoId / FB videoId·postId / IG·Threads mediaId，但 `updatePlatform`
+  寫入 `post_targets` 時只存了 `remote_url`。「抓取數據」遇到空 `remote_id`
+  會靜默跳過該平台 → 歷史頁永遠顯示不出 讚/留言/觸及 數字，
+  只彈出「抓取完成（部分平台可能無 insights 權限）」誤導提示
+- 修法：`PublishPlatformState` 新增 `remoteId`，7 個發布成功點
+  （YT / FB Reels / FB 圖文 / IG Reels / IG 單圖 / IG Carousel / Threads）
+  全部補存
+
+### ♻ 舊紀錄回填
+- 按「抓取數據」時，`remote_id` 為空的舊紀錄自動從貼文網址反推 ID：
+  - YouTube：`/shorts/{id}`、`watch?v={id}` 直接解析
+  - Facebook：`/reel/{id}`、`/{pageId}/posts/{postId}`、`/videos/{id}` 直接解析
+  - Instagram：網址只有 shortcode → 呼叫 `/{ig-user-id}/media?fields=id,permalink`
+    比對 permalink 取得數字 media id（最多翻 3 頁 × 100 筆）
+  - 回填成功即寫回資料庫（`setTargetRemoteId`，不動 status / finished_at），
+    之後正常抓數據；v0.9.11 以前的 147 筆歷史全部受惠
+
+---
+
 ## v0.9.11 — 2026-10-03 — Threads 全面退出本次 App Review
 
 ### 🎯 決策

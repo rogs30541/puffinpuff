@@ -239,6 +239,8 @@ export interface PublishPlatformState {
   totalBytes?: number;
   error?: string;
   url?: string;
+  /** v0.9.12：平台端資源 ID（YT videoId / FB videoId/postId / IG·Threads mediaId），抓取數據用 */
+  remoteId?: string;
 }
 
 export interface TranscodeProgress {

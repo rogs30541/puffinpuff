@@ -186,6 +186,66 @@ export async function fetchInstagramStats(accountId: number, mediaId: string): P
 }
 
 /**
+ * v0.9.12：舊紀錄 remote_id 回填 — 從貼文網址反推平台資源 ID。
+ * v0.9.11 以前發布管線沒把平台 ID 存進 post_targets，抓數據會被跳過；
+ * 這裡讓舊紀錄按「抓取數據」時能自動補上 ID。
+ */
+export async function backfillRemoteIdFromUrl(
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads',
+  accountId: number,
+  remoteUrl: string
+): Promise<string | null> {
+  if (platform === 'youtube') {
+    const m = remoteUrl.match(/(?:shorts\/|watch\?v=)([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+  }
+  if (platform === 'facebook') {
+    let m = remoteUrl.match(/facebook\.com\/reel\/(\d+)/);
+    if (m) return m[1];
+    m = remoteUrl.match(/facebook\.com\/(\d+)\/posts\/(\d+)/);
+    if (m) return `${m[1]}_${m[2]}`;
+    m = remoteUrl.match(/facebook\.com\/[^/]+\/videos\/(\d+)/);
+    if (m) return m[1];
+    return null;
+  }
+  if (platform === 'instagram') {
+    // IG 網址只有 shortcode，Graph API 需要數字 media id → 用 /{ig-user-id}/media 比對 permalink
+    const sc = remoteUrl.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/);
+    if (!sc) return null;
+    const shortcode = sc[1];
+    const account = getAccountById(accountId);
+    const accessToken = getDecryptedAccessToken(accountId);
+    if (!account || !accessToken) return null;
+    const { api_version: apiVersion } = loadMetaCreds();
+    try {
+      let url: string | null =
+        `https://graph.facebook.com/${apiVersion}/${account.externalId}/media`;
+      let params: Record<string, string> | undefined = {
+        fields: 'id,permalink',
+        limit: '100',
+        access_token: accessToken
+      };
+      for (let page = 0; page < 3 && url; page++) {
+        const resp = await axios.get(url, params ? { params } : undefined);
+        const data = resp.data as {
+          data?: Array<{ id: string; permalink?: string }>;
+          paging?: { next?: string };
+        };
+        const items = data.data ?? [];
+        const hit = items.find((it) => it.permalink?.includes(`/${shortcode}`));
+        if (hit) return hit.id;
+        url = data.paging?.next ?? null;
+        params = undefined; // paging.next 已帶完整 query
+      }
+    } catch {
+      /* 比對不到 → null */
+    }
+    return null;
+  }
+  return null;
+}
+
+/**
  * 通用：依平台分流取數據
  */
 export async function fetchStatsForTarget(

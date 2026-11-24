@@ -231,6 +231,15 @@ export function updateTarget(input: UpdateTargetInput): void {
   );
 }
 
+/** v0.9.12：單獨回填 remote_id（不動 status / finished_at） */
+export function setTargetRemoteId(postId: number, platform: string, remoteId: string): void {
+  execute('UPDATE post_targets SET remote_id = ? WHERE post_id = ? AND platform = ?', [
+    remoteId,
+    postId,
+    platform
+  ]);
+}
+
 export function listPosts(filter?: { status?: PostStatus | 'all' }): PostRecord[] {
   let sql = `SELECT * FROM posts ORDER BY created_at DESC LIMIT 200`;
   const params: unknown[] = [];
