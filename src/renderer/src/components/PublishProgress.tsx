@@ -15,6 +15,7 @@ import {
   IconBrandFacebook,
   IconBrandInstagram,
   IconBrandThreads,
+  IconBrandTiktok,
   IconCheck,
   IconAlertTriangle,
   IconLoader,
@@ -35,7 +36,8 @@ const PLATFORM_META: Record<
   youtube: { name: 'YouTube', icon: IconBrandYoutube, color: '#FF0000' },
   facebook: { name: 'Facebook', icon: IconBrandFacebook, color: '#1877F2' },
   instagram: { name: 'Instagram', icon: IconBrandInstagram, color: '#E4405F' },
-  threads: { name: 'Threads', icon: IconBrandThreads, color: '#000000' }
+  threads: { name: 'Threads', icon: IconBrandThreads, color: '#000000' },
+  tiktok: { name: 'TikTok', icon: IconBrandTiktok, color: '#010101' }
 };
 
 const STATUS_LABEL: Record<PublishPlatformState['status'], string> = {

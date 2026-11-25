@@ -64,6 +64,17 @@ const PROVIDER_META: Record<
       '4. 按下方格式貼入',
     placeholder:
       '{"app_id":"...","app_secret":"...","api_version":"v1.0","redirect_uri":"https://yourdomain.com/threads-callback","scopes":["threads_basic","threads_content_publish"]}'
+  },
+  tiktok: {
+    name: 'TikTok',
+    guideUrl: 'https://developers.tiktok.com/',
+    guide:
+      '1. TikTok for Developers → Manage apps → Create app\n' +
+      '2. 加入產品「Login Kit」與「Content Posting API」，勾 Direct Post\n' +
+      '3. Login Kit → Redirect URI 註冊三筆：http://127.0.0.1:6162/callback/、6163、6164\n' +
+      '4. Scopes 勾 user.info.basic / user.info.profile / video.publish\n' +
+      '5. App 詳細資料 → 抄 Client key / Client secret → 按下方格式貼入',
+    placeholder: '{"client_key":"...","client_secret":"..."}'
   }
 };
 

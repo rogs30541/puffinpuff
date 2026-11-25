@@ -227,7 +227,7 @@ export async function fetchInstagramStats(accountId: number, mediaId: string): P
  * 這裡讓舊紀錄按「抓取數據」時能自動補上 ID。
  */
 export async function backfillRemoteIdFromUrl(
-  platform: 'youtube' | 'facebook' | 'instagram' | 'threads',
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok',
   accountId: number,
   remoteUrl: string
 ): Promise<string | null> {
@@ -285,7 +285,7 @@ export async function backfillRemoteIdFromUrl(
  * 通用：依平台分流取數據
  */
 export async function fetchStatsForTarget(
-  platform: 'youtube' | 'facebook' | 'instagram' | 'threads',
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok',
   accountId: number,
   remoteId: string
 ): Promise<PostStats> {
@@ -294,6 +294,10 @@ export async function fetchStatsForTarget(
   if (platform === 'instagram') return fetchInstagramStats(accountId, remoteId);
   if (platform === 'threads') {
     // v0.7.0：Threads insights 需 threads_manage_insights 權限 — 先回空值不擋發布
+    return { views: null, likesCount: null, commentsCount: null, sharesCount: null, reach: null };
+  }
+  if (platform === 'tiktok') {
+    // v0.10.0：TikTok 影片數據需 video.list scope — 先回空值不擋發布
     return { views: null, likesCount: null, commentsCount: null, sharesCount: null, reach: null };
   }
   throw new Error(`不支援的平台：${platform}`);

@@ -26,6 +26,7 @@ import {
   IconBrandFacebook,
   IconBrandInstagram,
   IconBrandThreads,
+  IconBrandTiktok,
   IconCheck,
   IconAlertTriangle,
   IconLoader,
@@ -42,13 +43,14 @@ import type { PostRecord, PostStatus, PostTargetRecord, TargetStatus } from '../
 import { VideoPreviewModal } from '../components/VideoPreviewModal';
 
 const PLATFORM_ICON: Record<
-  'youtube' | 'facebook' | 'instagram' | 'threads',
+  'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok',
   { icon: Icon; color: string; name: string }
 > = {
   youtube: { icon: IconBrandYoutube, color: '#FF0000', name: 'YouTube' },
   facebook: { icon: IconBrandFacebook, color: '#1877F2', name: 'Facebook' },
   instagram: { icon: IconBrandInstagram, color: '#E4405F', name: 'Instagram' },
-  threads: { icon: IconBrandThreads, color: '#000000', name: 'Threads' }
+  threads: { icon: IconBrandThreads, color: '#000000', name: 'Threads' },
+  tiktok: { icon: IconBrandTiktok, color: '#010101', name: 'TikTok' }
 };
 
 const TARGET_STATUS_COLOR: Record<TargetStatus, string> = {

@@ -15,18 +15,20 @@ import { join } from 'node:path';
 import { execute, queryOne } from './database';
 import { encryptString, decryptString } from './safeStorage';
 
-export type CredentialProvider = 'google' | 'meta' | 'threads';
+export type CredentialProvider = 'google' | 'meta' | 'threads' | 'tiktok';
 
 const PROVIDER_FILES: Record<CredentialProvider, string> = {
   google: 'google_oauth.json',
   meta: 'meta_oauth.json',
-  threads: 'threads_oauth.json'
+  threads: 'threads_oauth.json',
+  tiktok: 'tiktok_oauth.json'
 };
 
 const PROVIDER_LABELS: Record<CredentialProvider, string> = {
   google: 'Google（YouTube）',
   meta: 'Meta（Facebook / Instagram）',
-  threads: 'Threads'
+  threads: 'Threads',
+  tiktok: 'TikTok'
 };
 
 function secretsFilePath(provider: CredentialProvider): string {
@@ -75,6 +77,10 @@ function validateShape(provider: CredentialProvider, parsed: any): string | null
     if (!parsed.app_secret) return '缺 app_secret';
     if (!parsed.api_version) return '缺 api_version（例 v1.0）';
     if (!parsed.redirect_uri) return '缺 redirect_uri';
+  }
+  if (provider === 'tiktok') {
+    if (!parsed.client_key) return '缺 client_key（TikTok Developer Portal → App 詳細資料）';
+    if (!parsed.client_secret) return '缺 client_secret';
   }
   return null;
 }
@@ -135,6 +141,9 @@ function summarize(provider: CredentialProvider, parsed: any): string {
       const id = String(parsed.installed?.client_id ?? '');
       return `client_id: ${id.slice(0, 20)}...`;
     }
+    if (provider === 'tiktok') {
+      return `client_key: ${String(parsed.client_key ?? '?')}`;
+    }
     return `app_id: ${String(parsed.app_id ?? '?')}`;
   } catch {
     return '(無法解析)';
@@ -184,7 +193,7 @@ export function getCredentialStatus(provider: CredentialProvider): CredentialSta
 }
 
 export function getAllCredentialStatuses(): CredentialStatus[] {
-  return (['google', 'meta', 'threads'] as const).map(getCredentialStatus);
+  return (['google', 'meta', 'threads', 'tiktok'] as const).map(getCredentialStatus);
 }
 
 export function saveCredentials(provider: CredentialProvider, jsonText: string): CredentialStatus {

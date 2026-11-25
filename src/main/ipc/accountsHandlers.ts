@@ -12,6 +12,7 @@ import {
 import { cancelGoogleAuth, connectGoogleAccount } from '../oauth/googleOAuth';
 import { cancelMetaAuth, connectMetaAccount, type MetaConnectResult } from '../oauth/metaOAuth';
 import { cancelThreadsAuth, connectThreadsAccount, type ThreadsConnectResult } from '../oauth/threadsOAuth';
+import { cancelTikTokAuth, connectTikTokAccount } from '../oauth/tiktokOAuth';
 import { parseMetaError } from '../lib/metaErrorHelpers';
 import { loadCredentialsJson } from '../lib/credentialsStore';
 
@@ -51,6 +52,16 @@ export function registerAccountsHandlers(): void {
 
   ipcMain.handle('accounts:cancelThreadsAuth', (): boolean => {
     cancelThreadsAuth();
+    return true;
+  });
+
+  // v0.10.0：TikTok OAuth（Login Kit for Desktop）
+  ipcMain.handle('accounts:connectTikTok', async (): Promise<AccountPublic> => {
+    return await connectTikTokAccount();
+  });
+
+  ipcMain.handle('accounts:cancelTikTokAuth', (): boolean => {
+    cancelTikTokAuth();
     return true;
   });
 

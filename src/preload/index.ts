@@ -48,6 +48,8 @@ const api: PuffinAPI = {
       threadsAccounts: AccountPublic[];
     }>,
     cancelThreadsAuth: () => ipcRenderer.invoke('accounts:cancelThreadsAuth') as Promise<boolean>,
+    connectTikTok: () => ipcRenderer.invoke('accounts:connectTikTok') as Promise<AccountPublic>,
+    cancelTikTokAuth: () => ipcRenderer.invoke('accounts:cancelTikTokAuth') as Promise<boolean>,
     disconnect: (id) => ipcRenderer.invoke('accounts:disconnect', id) as Promise<boolean>,
     testConnection: (accountId: number) =>
       ipcRenderer.invoke('accounts:testConnection', accountId) as Promise<{

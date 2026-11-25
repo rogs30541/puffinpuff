@@ -41,6 +41,7 @@ import {
   IconBrandFacebook,
   IconBrandInstagram,
   IconBrandThreads,
+  IconBrandTiktok,
   IconShieldCheck,
   type Icon
 } from '@tabler/icons-react';
@@ -58,13 +59,14 @@ import { WatchersModal } from '../components/WatchersModal';
 import { TemplateApplyBar } from '../components/TemplateApplyBar';
 
 const PLATFORM_ICON: Record<
-  'youtube' | 'facebook' | 'instagram' | 'threads',
+  'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok',
   { icon: Icon; color: string; name: string }
 > = {
   youtube: { icon: IconBrandYoutube, color: '#FF0000', name: 'YouTube' },
   facebook: { icon: IconBrandFacebook, color: '#1877F2', name: 'Facebook' },
   instagram: { icon: IconBrandInstagram, color: '#E4405F', name: 'Instagram' },
-  threads: { icon: IconBrandThreads, color: '#000000', name: 'Threads' }
+  threads: { icon: IconBrandThreads, color: '#000000', name: 'Threads' },
+  tiktok: { icon: IconBrandTiktok, color: '#010101', name: 'TikTok' }
 };
 
 function formatDateTime(ts: number): string {
@@ -127,15 +129,16 @@ function toMediaUrl(filePath: string | null): string | undefined {
 
 function getEnabledPlatforms(
   post: PostRecord
-): ('youtube' | 'facebook' | 'instagram' | 'threads')[] {
+): ('youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok')[] {
   if (!post.contentJson) return [];
   try {
     const c = JSON.parse(post.contentJson);
-    const result: ('youtube' | 'facebook' | 'instagram' | 'threads')[] = [];
+    const result: ('youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok')[] = [];
     if (c.perPlatform?.youtube?.enabled) result.push('youtube');
     if (c.perPlatform?.facebook?.enabled) result.push('facebook');
     if (c.perPlatform?.instagram?.enabled) result.push('instagram');
     if (c.perPlatform?.threads?.enabled) result.push('threads');
+    if (c.perPlatform?.tiktok?.enabled) result.push('tiktok');
     return result;
   } catch {
     return [];

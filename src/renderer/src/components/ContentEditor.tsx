@@ -22,6 +22,7 @@ import {
   IconBrandFacebook,
   IconBrandInstagram,
   IconBrandThreads,
+  IconBrandTiktok,
   IconUser
 } from '@tabler/icons-react';
 import {
@@ -33,7 +34,7 @@ import {
   type Privacy
 } from '../../../shared/types';
 
-type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads';
+type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok';
 
 interface ContentEditorProps {
   value?: PublishContent;
@@ -53,7 +54,9 @@ const PLATFORM_META: Record<
   facebook: { name: 'Facebook', color: '#1877F2', supportsTitle: false, supportsPrivacy: false },
   instagram: { name: 'Instagram', color: '#E4405F', supportsTitle: false, supportsPrivacy: false },
   // v0.7.0：Threads — 純文字社群、無標題、無隱私（一律公開）
-  threads: { name: 'Threads', color: '#000000', supportsTitle: false, supportsPrivacy: false }
+  threads: { name: 'Threads', color: '#000000', supportsTitle: false, supportsPrivacy: false },
+  // v0.10.0：TikTok — 單一 caption（標題+hashtags 併入），隱私由發布時 public/private 對應
+  tiktok: { name: 'TikTok', color: '#010101', supportsTitle: false, supportsPrivacy: false }
 };
 
 interface PlatformChipProps {
@@ -280,6 +283,7 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
         <Group gap={8}>
           {(Object.keys(content.perPlatform) as PlatformKey[])
             .filter((p) => FEATURE_FLAGS.THREADS_UI_ENABLED || p !== 'threads')
+            .filter((p) => FEATURE_FLAGS.TIKTOK_UI_ENABLED || p !== 'tiktok')
             .map((p) => (
               <PlatformChip
                 key={p}
@@ -308,6 +312,11 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
           {FEATURE_FLAGS.THREADS_UI_ENABLED && (
             <Tabs.Tab value="threads" leftSection={<IconBrandThreads size={16} color="#000000" />}>
               Threads
+            </Tabs.Tab>
+          )}
+          {FEATURE_FLAGS.TIKTOK_UI_ENABLED && (
+            <Tabs.Tab value="tiktok" leftSection={<IconBrandTiktok size={16} color="#010101" />}>
+              TikTok
             </Tabs.Tab>
           )}
         </Tabs.List>
@@ -368,6 +377,9 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
         <Tabs.Panel value="instagram">{renderPlatformPanel('instagram')}</Tabs.Panel>
         {FEATURE_FLAGS.THREADS_UI_ENABLED && (
           <Tabs.Panel value="threads">{renderPlatformPanel('threads')}</Tabs.Panel>
+        )}
+        {FEATURE_FLAGS.TIKTOK_UI_ENABLED && (
+          <Tabs.Panel value="tiktok">{renderPlatformPanel('tiktok')}</Tabs.Panel>
         )}
       </Tabs>
     </Card>

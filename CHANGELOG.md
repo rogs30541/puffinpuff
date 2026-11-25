@@ -4,6 +4,33 @@
 
 ---
 
+## v0.10.0 — 2026-11-25 — 🎵 第 5 平台：TikTok 影片發布
+
+### ✨ 新增
+- **TikTok 影片發布**（Content Posting API・Direct Post）：
+  - OAuth：Login Kit for Desktop — `http://127.0.0.1:6162-6164/callback/` loopback
+    ＋ PKCE（官方桌面規格，不需要像 Threads 那樣的 HTTPS 網域跳轉）
+  - 上傳：**FILE_UPLOAD 直傳**（分塊 PUT，≤64MB 單塊、>64MB 以 10MB 分塊）——
+    本機檔案直接送 TikTok，**完全不經 tunnel，不佔 port**
+  - access token 24h：每次發布前自動用 refresh token（365 天）續期
+  - 標題＝共通標題＋hashtags 併入單一 caption（上限 2200 字）
+- 帳號頁新增 TikTok 卡片（連線/解綁/全部解綁）；內容編輯器新增 TikTok chip 與分頁；
+  發布進度、歷史、排程月曆圖示全面支援
+- 設定頁 OAuth 憑證新增 TikTok（client_key / client_secret，附申請教學）
+- 順序發布隊伍：IG → FB → YT → Threads → **TikTok**（殿後，因它不佔 port）
+- `FEATURE_FLAGS.TIKTOK_UI_ENABLED = true`
+
+### ⚠ 已知限制（TikTok 平台規則，非 bug）
+- app 未通過 TikTok 審核（audit）前：發布內容**強制僅自己可見（SELF_ONLY）**、
+  24 小時內最多 5 個使用者可發文 — 與 Meta 開發模式同概念
+- TikTok 只接影片（圖文/carousel 模式不會出現 TikTok）
+- 影片數據（觀看/讚）需 video.list scope，本版未接（歷史頁顯示空）
+
+### 🔧 其他
+- `.gitignore` 排除 `審查錄影/*.mp4`（螢幕錄影不進公開 repo）
+
+---
+
 ## v0.9.14 — 2026-11-25 — FB 數據改抓粉專層級（開發模式 NPE 限制的正解）
 
 ### 🔍 根因（Graph API Explorer 逐欄位實測）

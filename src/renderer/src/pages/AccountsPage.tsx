@@ -19,6 +19,7 @@ import {
   IconBrandFacebook,
   IconBrandInstagram,
   IconBrandThreads,
+  IconBrandTiktok,
   IconLink,
   IconLinkOff,
   IconCheck,
@@ -34,7 +35,7 @@ interface PlatformDef {
   name: string;
   description: string;
   color: string;
-  connectKind: 'google' | 'meta' | 'threads' | 'none';
+  connectKind: 'google' | 'meta' | 'threads' | 'tiktok' | 'none';
 }
 
 const PLATFORMS: PlatformDef[] = [
@@ -70,6 +71,15 @@ const PLATFORMS: PlatformDef[] = [
     description: '發布純文字 / 圖片 / 影片貼文。Threads 走獨立 OAuth，需另外授權一次。',
     color: '#000000',
     connectKind: 'threads'
+  },
+  // v0.10.0：TikTok — Login Kit for Desktop（loopback + PKCE），FILE_UPLOAD 直傳不需 tunnel
+  {
+    platform: 'tiktok',
+    icon: IconBrandTiktok,
+    name: 'TikTok',
+    description: '發布影片到你的 TikTok。獨立 OAuth；app 未過 TikTok 審核前，貼文僅自己可見。',
+    color: '#010101',
+    connectKind: 'tiktok'
   }
 ];
 
@@ -209,7 +219,7 @@ function PlatformCard({
 
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountPublic[]>([]);
-  const [connecting, setConnecting] = useState<'google' | 'meta' | 'threads' | null>(null);
+  const [connecting, setConnecting] = useState<'google' | 'meta' | 'threads' | 'tiktok' | null>(null);
   const [loading, setLoading] = useState(true);
   const [testingId, setTestingId] = useState<number | null>(null);
 
@@ -297,6 +307,30 @@ export function AccountsPage() {
     } catch (e) {
       notifications.show({
         title: 'Threads 連線失敗',
+        message: (e as Error).message,
+        color: 'red',
+        icon: <IconAlertTriangle size={18} />
+      });
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  // v0.10.0：TikTok OAuth
+  const handleConnectTikTok = async () => {
+    setConnecting('tiktok');
+    try {
+      const account = await window.puffin.accounts.connectTikTok();
+      notifications.show({
+        title: '已連線 TikTok',
+        message: `${account.displayName} 已成功授權`,
+        color: 'mint',
+        icon: <IconCheck size={18} />
+      });
+      await refresh();
+    } catch (e) {
+      notifications.show({
+        title: 'TikTok 連線失敗',
         message: (e as Error).message,
         color: 'red',
         icon: <IconAlertTriangle size={18} />
@@ -431,7 +465,10 @@ export function AccountsPage() {
       </Alert>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-        {PLATFORMS.filter((def) => FEATURE_FLAGS.THREADS_UI_ENABLED || def.platform !== 'threads').map((def) => {
+        {PLATFORMS
+          .filter((def) => FEATURE_FLAGS.THREADS_UI_ENABLED || def.platform !== 'threads')
+          .filter((def) => FEATURE_FLAGS.TIKTOK_UI_ENABLED || def.platform !== 'tiktok')
+          .map((def) => {
           const platformAccounts = accounts.filter((a) => a.platform === def.platform);
           const onConnect =
             def.connectKind === 'google'
@@ -440,11 +477,14 @@ export function AccountsPage() {
                 ? handleConnectMeta
                 : def.connectKind === 'threads'
                   ? handleConnectThreads
-                  : () => {};
+                  : def.connectKind === 'tiktok'
+                    ? handleConnectTikTok
+                    : () => {};
           const isConnecting =
             (def.connectKind === 'google' && connecting === 'google') ||
             (def.connectKind === 'meta' && connecting === 'meta') ||
-            (def.connectKind === 'threads' && connecting === 'threads');
+            (def.connectKind === 'threads' && connecting === 'threads') ||
+            (def.connectKind === 'tiktok' && connecting === 'tiktok');
           return (
             <PlatformCard
               key={def.platform}

@@ -1,4 +1,4 @@
-export type Platform = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok';
+export type Platform = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok' | 'tiktok';
 
 /**
  * v0.7.3 Feature flags — UI 顯露控制（底層 code 不動，純 UI 開關）
@@ -9,7 +9,9 @@ export type Platform = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tikto
  *    底層 adapter / OAuth / IPC / DB schema 保留，日後要重啟翻 true 即可。
  */
 export const FEATURE_FLAGS = {
-  THREADS_UI_ENABLED: false
+  THREADS_UI_ENABLED: false,
+  /** v0.10.0：TikTok 影片發布（Content Posting API・FILE_UPLOAD 直傳，不需 tunnel） */
+  TIKTOK_UI_ENABLED: true
 } as const;
 
 /**
@@ -38,7 +40,8 @@ export function normalizePublishContent(raw: any): PublishContent {
       youtube: pp.youtube ?? defaultOverride,
       facebook: pp.facebook ?? defaultOverride,
       instagram: pp.instagram ?? defaultOverride,
-      threads: pp.threads ?? defaultOverride
+      threads: pp.threads ?? defaultOverride,
+      tiktok: pp.tiktok ?? defaultOverride
     },
     ...(r.imageCarouselPaths ? { imageCarouselPaths: r.imageCarouselPaths } : {})
   };
@@ -128,6 +131,7 @@ export interface PublishContent {
     facebook: PlatformOverride;
     instagram: PlatformOverride;
     threads: PlatformOverride;
+    tiktok: PlatformOverride;
   };
   /**
    * v0.3.2：carousel 第 2..N 張的路徑（圖文模式專屬）
@@ -209,7 +213,8 @@ export const DEFAULT_PUBLISH_CONTENT: PublishContent = {
     youtube: { enabled: true },
     facebook: { enabled: true },
     instagram: { enabled: true },
-    threads: { enabled: false } // v0.7.0：預設關閉，使用者連 Threads 帳號後再開
+    threads: { enabled: false }, // v0.7.0：預設關閉，使用者連 Threads 帳號後再開
+    tiktok: { enabled: false } // v0.10.0：預設關閉，使用者連 TikTok 帳號後再開
   }
 };
 
@@ -217,7 +222,8 @@ export const PLATFORM_LIMITS = {
   youtube: { title: 100, description: 5000 },
   facebook: { title: 0, description: 63000 },
   instagram: { title: 0, description: 2200 },
-  threads: { title: 0, description: 500 }
+  threads: { title: 0, description: 500 },
+  tiktok: { title: 2200, description: 0 }
 } as const;
 
 export type NavTarget = 'publish' | 'schedule' | 'history' | 'accounts' | 'templates' | 'settings';
@@ -230,7 +236,7 @@ export type PublishPlatformStatus =
   | 'cancelled';
 
 export interface PublishPlatformState {
-  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok';
   accountId: number;
   accountName: string;
   status: PublishPlatformStatus;
@@ -289,7 +295,7 @@ export type TargetStatus = 'pending' | 'success' | 'failed' | 'cancelled';
 
 export interface PostTargetRecord {
   id: number;
-  platform: 'youtube' | 'facebook' | 'instagram' | 'threads';
+  platform: 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok';
   accountId: number | null;
   accountName: string;
   status: TargetStatus;
@@ -623,8 +629,8 @@ export interface S3ConfigPublic {
   lastError: string | null;
 }
 
-/** v0.9.0：OAuth 憑證自帶 */
-export type CredentialProvider = 'google' | 'meta' | 'threads';
+/** v0.9.0：OAuth 憑證自帶（v0.10.0 加入 tiktok） */
+export type CredentialProvider = 'google' | 'meta' | 'threads' | 'tiktok';
 
 export interface CredentialStatus {
   provider: CredentialProvider;
@@ -669,6 +675,9 @@ export interface PuffinAPI {
       threadsAccounts: AccountPublic[];
     }>;
     cancelThreadsAuth(): Promise<boolean>;
+    /** v0.10.0：TikTok OAuth（Login Kit for Desktop，loopback + PKCE） */
+    connectTikTok(): Promise<AccountPublic>;
+    cancelTikTokAuth(): Promise<boolean>;
     disconnect(id: number): Promise<boolean>;
     /** v0.4.4：測試帳號連線（call 對應平台 API，回傳是否成功 + 延遲 + 訊息）*/
     testConnection(accountId: number): Promise<{
@@ -711,7 +720,7 @@ export interface PuffinAPI {
     saveDraft(args: SaveDraftArgs): Promise<number>;
     delete(id: number): Promise<boolean>;
     /** 對既有 post 的單一失敗平台重新發布 */
-    retryTarget(postId: number, platform: 'youtube' | 'facebook' | 'instagram' | 'threads'): Promise<string>;
+    retryTarget(postId: number, platform: 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok'): Promise<string>;
     /** v0.4.2：抓取此 post 所有 target 的觸及數據（views/likes/comments/reach）*/
     fetchStats(postId: number): Promise<import('./types').PostTargetRecord[]>;
   };

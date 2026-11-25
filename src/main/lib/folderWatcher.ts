@@ -56,7 +56,9 @@ function buildContent(watcher: WatchedFolder, fileName: string): PublishContent 
         ...(t.targetAccounts?.instagram ? { accountId: t.targetAccounts.instagram } : {})
       },
       // v0.7.0：folderWatcher 既有監聽器預設不啟 Threads（避免突然多發一平台）
-      threads: { ...DEFAULT_PUBLISH_CONTENT.perPlatform.threads, enabled: false }
+      threads: { ...DEFAULT_PUBLISH_CONTENT.perPlatform.threads, enabled: false },
+      // v0.10.0：同理，TikTok 預設不啟（監聽器模板日後再加 UI）
+      tiktok: { ...DEFAULT_PUBLISH_CONTENT.perPlatform.tiktok, enabled: false }
     }
   };
 }

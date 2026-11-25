@@ -33,3 +33,7 @@ release/
 
 # Claude / IDE worktree
 .claude/
+
+# 審查錄影（螢幕錄影原檔／壓縮檔，不進公開 repo）
+審查錄影/*.mp4
+審查錄影/*.mkv

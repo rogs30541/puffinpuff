@@ -18,6 +18,7 @@ import {
   publishCarouselPost
 } from '../adapters/instagramAdapter';
 import { uploadToThreads } from '../adapters/threadsAdapter';
+import { uploadToTikTok } from '../adapters/tiktokAdapter';
 import { withRetry } from '../lib/retry';
 import { refreshUserTokenForAccount } from '../lib/metaTokenRefresher';
 import { isMetaAuthError } from '../lib/metaErrorHelpers';
@@ -62,7 +63,7 @@ import {
   type PublishStartArgs
 } from '../../shared/types';
 
-type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads';
+type PlatformKey = 'youtube' | 'facebook' | 'instagram' | 'threads' | 'tiktok';
 
 interface RunningJob {
   state: PublishJobState;
@@ -462,6 +463,61 @@ async function runThreads(
   }
 }
 
+// v0.10.0：TikTok — 影片 Direct Post（FILE_UPLOAD 直傳，不需 tunnel）
+async function runTikTok(
+  job: RunningJob,
+  filePath: string,
+  account: AccountPublic,
+  content: ReturnType<typeof effectiveContent>
+): Promise<void> {
+  updatePlatform(job, 'tiktok', { status: 'uploading', percent: 0 });
+
+  // TikTok 只有單一 caption 欄位：標題 + hashtags 併進 title（上限 2200 字）
+  const title = [content.title, content.hashtags].filter(Boolean).join(' ').slice(0, 2200);
+
+  try {
+    const result = await withRetry(
+      () => uploadToTikTok(
+        {
+          accountId: account.id,
+          filePath,
+          title,
+          privacy: content.privacy
+        },
+        (e) => {
+          if (job.cancelRequested) return;
+          updatePlatform(job, 'tiktok', {
+            percent: e.percent,
+            bytesUploaded: e.bytesUploaded,
+            totalBytes: e.totalBytes
+          });
+        }
+      ),
+      {
+        onRetry: (attempt, err, delay) => {
+          updatePlatform(job, 'tiktok', {
+            status: 'uploading',
+            percent: 0,
+            error: `重試 ${attempt}/3（${Math.round(delay / 1000)}s 後）：${err.message.slice(0, 80)}`
+          });
+        }
+      }
+    );
+    updatePlatform(job, 'tiktok', {
+      status: 'success',
+      percent: 100,
+      url: result.url,
+      remoteId: result.postId ?? result.publishId
+    });
+  } catch (e) {
+    updatePlatform(job, 'tiktok', {
+      status: 'failed',
+      error: (e as Error).message
+    });
+    throw e;
+  }
+}
+
 function runUnimplemented(job: RunningJob, platform: PlatformKey): void {
   updatePlatform(job, platform, {
     status: 'failed',
@@ -512,8 +568,9 @@ function startPublishJob(
 
   // v0.6.0：YT 只接 video；image / carousel 都排除 YT
   // v0.7.0：Threads 三種 postType 都支援（TEXT/IMAGE/VIDEO）
+  // v0.10.0：TikTok 只接 video（Content Posting API 相片另有 endpoint，暫不支援）
   const candidatePlatforms = postType === 'video'
-    ? (['youtube', 'facebook', 'instagram', 'threads'] as const)
+    ? (['youtube', 'facebook', 'instagram', 'threads', 'tiktok'] as const)
     : (['facebook', 'instagram', 'threads'] as const);
 
   // 為每個啟用平台選定要發布的帳號
@@ -660,7 +717,7 @@ function startPublishJob(
         //   順序：IG（唯一吃 tunnel/port 的平台）→ FB → YT Shorts → Threads
         //   每個平台完成後：tunnel 已在 adapter finally 關閉（清 port）→ 等 30 秒讓
         //   OS 完全釋放 socket（quick tunnel 的 TIME_WAIT）→ 再發下一個平台
-        const PLATFORM_ORDER: PlatformKey[] = ['instagram', 'facebook', 'youtube', 'threads'];
+        const PLATFORM_ORDER: PlatformKey[] = ['instagram', 'facebook', 'youtube', 'threads', 'tiktok'];
         const orderedPlatforms = [...platforms].sort(
           (a, b) => PLATFORM_ORDER.indexOf(a) - PLATFORM_ORDER.indexOf(b)
         );
@@ -714,6 +771,9 @@ function startPublishJob(
           } else if (platform === 'threads') {
             // v0.7.0：Threads — video / image / carousel 都走 runThreads
             run = runThreads(job, uploadPath, account, content, postType);
+          } else if (platform === 'tiktok') {
+            // v0.10.0：TikTok — 只有 video 會進 candidatePlatforms
+            run = runTikTok(job, uploadPath, account, content);
           } else {
             runUnimplemented(job, platform);
           }
@@ -805,7 +865,7 @@ export function republishExistingPost(
     const successfulPlatforms = new Set(
       post.targets.filter((t) => t.status === 'success').map((t) => t.platform)
     );
-    for (const p of ['youtube', 'facebook', 'instagram', 'threads'] as const) {
+    for (const p of ['youtube', 'facebook', 'instagram', 'threads', 'tiktok'] as const) {
       if (successfulPlatforms.has(p)) {
         fullContent.perPlatform[p].enabled = false;
       }
