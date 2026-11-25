@@ -20,6 +20,8 @@ const SCOPES = [
 ];
 
 let activeServer: Server | null = null;
+// v0.10.3：取消授權時立即 reject pending promise（原本只關 server，renderer 會永遠懸著）
+let activeCancel: (() => void) | null = null;
 
 function loadCredentials(): GoogleCredentials {
   // v0.9.0：走中央憑證層（DB 優先 → secrets 檔案 fallback）
@@ -174,16 +176,27 @@ export async function connectGoogleAccount(): Promise<GoogleConnectResult> {
 
     function cleanup(): void {
       if (activeServer === server) activeServer = null;
+      activeCancel = null;
       try {
         server.close();
       } catch {
         /* noop */
       }
     }
+
+    // v0.10.3：讓「取消授權」立即結束流程
+    activeCancel = () => {
+      cleanup();
+      reject(new Error('已取消 Google 授權'));
+    };
   });
 }
 
 export function cancelGoogleAuth(): void {
+  if (activeCancel) {
+    activeCancel(); // v0.10.3：立即 reject pending promise + 清理 server
+    return;
+  }
   if (activeServer) {
     activeServer.close();
     activeServer = null;

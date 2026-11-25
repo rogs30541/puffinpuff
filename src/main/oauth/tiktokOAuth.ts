@@ -33,6 +33,8 @@ const USER_INFO_URL =
   'https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name,username';
 
 let activeServer: Server | null = null;
+// v0.10.3：取消授權時立即 reject pending promise（原本只關 server，renderer 會懸著等 timeout）
+let activeCancel: (() => void) | null = null;
 
 function htmlResponse(title: string, body: string): string {
   return `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>${title}</title><style>
@@ -98,6 +100,7 @@ export async function connectTikTokAccount(): Promise<AccountPublic> {
 
     function cleanup(): void {
       if (activeServer === serverRef) activeServer = null;
+      activeCancel = null;
       try {
         serverRef?.close();
       } catch {
@@ -118,6 +121,9 @@ export async function connectTikTokAccount(): Promise<AccountPublic> {
       cleanup();
       resolve(account);
     }
+
+    // v0.10.3：讓「取消授權」立即結束流程（而非等 5 分鐘 timeout）
+    activeCancel = () => fail(new Error('已取消 TikTok 授權'));
 
     const handler = async (
       req: Parameters<NonNullable<Parameters<typeof createServer>[1]>>[0],
@@ -270,6 +276,10 @@ export async function connectTikTokAccount(): Promise<AccountPublic> {
 }
 
 export function cancelTikTokAuth(): void {
+  if (activeCancel) {
+    activeCancel(); // v0.10.3：立即 reject pending promise + 清理 server
+    return;
+  }
   if (activeServer) {
     activeServer.close();
     activeServer = null;

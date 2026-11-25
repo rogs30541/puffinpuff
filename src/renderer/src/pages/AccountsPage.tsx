@@ -87,6 +87,7 @@ interface PlatformCardProps {
   def: PlatformDef;
   accounts: AccountPublic[];
   onConnect: () => void;
+  onCancelConnect: () => void;
   onDisconnect: (id: number) => void;
   onDisconnectAll: () => void;
   onTestConnection: (id: number) => void;
@@ -99,6 +100,7 @@ function PlatformCard({
   def,
   accounts,
   onConnect,
+  onCancelConnect,
   onDisconnect,
   onDisconnectAll,
   onTestConnection,
@@ -199,19 +201,29 @@ function PlatformCard({
           </Group>
         ))}
 
-        <Button
-          leftSection={isConnecting ? <Loader size={14} color="white" /> : <IconLink size={16} />}
-          variant={hasAccount ? 'light' : 'filled'}
-          color="mint"
-          onClick={onConnect}
-          disabled={isConnecting}
-        >
-          {isConnecting
-            ? '授權中…請完成授權視窗內步驟'
-            : hasAccount
-              ? '加入另一個帳號'
-              : '連線'}
-        </Button>
+        <Group gap="xs" wrap="nowrap">
+          <Button
+            style={{ flex: 1 }}
+            leftSection={isConnecting ? <Loader size={14} color="white" /> : <IconLink size={16} />}
+            variant={hasAccount ? 'light' : 'filled'}
+            color="mint"
+            onClick={onConnect}
+            disabled={isConnecting}
+          >
+            {isConnecting
+              ? '授權中…請完成授權視窗內步驟'
+              : hasAccount
+                ? '加入另一個帳號'
+                : '連線'}
+          </Button>
+          {isConnecting && (
+            <Tooltip label="立即中止這次授權（不用等逾時）">
+              <Button variant="light" color="red" onClick={onCancelConnect}>
+                取消
+              </Button>
+            </Tooltip>
+          )}
+        </Group>
       </Stack>
     </Card>
   );
@@ -250,11 +262,13 @@ export function AccountsPage() {
       });
       await refresh();
     } catch (e) {
+      const msg = (e as Error).message;
+      const cancelled = msg.includes('已取消');
       notifications.show({
-        title: 'YouTube 連線失敗',
-        message: (e as Error).message,
-        color: 'red',
-        icon: <IconAlertTriangle size={18} />
+        title: cancelled ? '已取消授權' : 'YouTube 連線失敗',
+        message: cancelled ? '' : msg,
+        color: cancelled ? 'gray' : 'red',
+        icon: cancelled ? undefined : <IconAlertTriangle size={18} />
       });
     } finally {
       setConnecting(null);
@@ -329,12 +343,26 @@ export function AccountsPage() {
       });
       await refresh();
     } catch (e) {
+      const msg = (e as Error).message;
+      const cancelled = msg.includes('已取消');
       notifications.show({
-        title: 'TikTok 連線失敗',
-        message: (e as Error).message,
-        color: 'red',
-        icon: <IconAlertTriangle size={18} />
+        title: cancelled ? '已取消授權' : 'TikTok 連線失敗',
+        message: cancelled ? '' : msg,
+        color: cancelled ? 'gray' : 'red',
+        icon: cancelled ? undefined : <IconAlertTriangle size={18} />
       });
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  // v0.10.3：授權中可立即取消（不用等 5 分鐘逾時）
+  const handleCancelConnect = async (kind: 'google' | 'meta' | 'threads' | 'tiktok') => {
+    try {
+      if (kind === 'google') await window.puffin.accounts.cancelGoogleAuth();
+      else if (kind === 'meta') await window.puffin.accounts.cancelMetaAuth();
+      else if (kind === 'threads') await window.puffin.accounts.cancelThreadsAuth();
+      else await window.puffin.accounts.cancelTikTokAuth();
     } finally {
       setConnecting(null);
     }
@@ -491,6 +519,9 @@ export function AccountsPage() {
               def={def}
               accounts={platformAccounts}
               onConnect={onConnect}
+              onCancelConnect={() =>
+                def.connectKind !== 'none' && handleCancelConnect(def.connectKind)
+              }
               onDisconnect={handleDisconnect}
               onDisconnectAll={() => handleDisconnectAll(platformAccounts)}
               onTestConnection={handleTestConnection}
