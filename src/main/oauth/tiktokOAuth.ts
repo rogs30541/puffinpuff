@@ -90,7 +90,9 @@ export async function connectTikTokAccount(): Promise<AccountPublic> {
   const scopes = creds.scopes?.length ? creds.scopes : DEFAULT_SCOPES;
 
   const codeVerifier = base64url(randomBytes(48));
-  const codeChallenge = base64url(createHash('sha256').update(codeVerifier).digest());
+  // ⚠ TikTok 的 PKCE 不照 RFC 7636：code_challenge 要 SHA256 的「hex」編碼，
+  //   不是標準的 base64url（用標準版會報 invalid_request: Code verifier or code challenge is invalid）
+  const codeChallenge = createHash('sha256').update(codeVerifier).digest('hex');
   const stateToken = base64url(randomBytes(16));
 
   return new Promise<AccountPublic>((resolve, reject) => {

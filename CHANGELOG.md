@@ -4,6 +4,15 @@
 
 ---
 
+## v0.10.4 — 2026-11-25 — 修 TikTok OAuth PKCE（token 交換失敗）
+
+### 🐛 修復
+- **TikTok 連線報「invalid_request: Code verifier or code challenge is invalid」**：
+  TikTok 的 PKCE 不照 RFC 7636 — `code_challenge` 必須是 SHA256 的 **hex** 編碼，
+  不是標準的 base64url。已改為 hex
+
+---
+
 ## v0.10.3 — 2026-11-25 — 授權中可立即取消（不再卡 5 分鐘）
 
 ### 🐛 修復 + UX
