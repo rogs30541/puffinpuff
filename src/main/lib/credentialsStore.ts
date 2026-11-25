@@ -35,6 +35,13 @@ function secretsFilePath(provider: CredentialProvider): string {
   return join(app.getAppPath(), 'secrets', PROVIDER_FILES[provider]);
 }
 
+// v0.11.0：公開發布版內建憑證 — electron-builder.public.yml 的 extraResources
+//   把 secrets-public/ 放進安裝後的 resources/secrets/（測試版安裝檔沒有這個資料夾）。
+//   不匯入 DB：使用者貼自己的憑證時 DB 優先，UI 顯示「內建檔案」。
+function builtinSecretsFilePath(provider: CredentialProvider): string {
+  return join(process.resourcesPath ?? '.', 'secrets', PROVIDER_FILES[provider]);
+}
+
 function readFromDb(provider: CredentialProvider): string | null {
   const row = queryOne<{ encrypted_json: Uint8Array }>(
     'SELECT encrypted_json FROM oauth_credentials WHERE provider = ?',
@@ -114,6 +121,12 @@ export function loadCredentialsJson(provider: CredentialProvider): any {
     return parsed;
   }
 
+  // 2.5 公開發布版內建憑證（resources/secrets/）— 直接讀檔，不匯入 DB
+  const builtinPath = builtinSecretsFilePath(provider);
+  if (existsSync(builtinPath)) {
+    return JSON.parse(readFileSync(builtinPath, 'utf-8'));
+  }
+
   // 3. 都沒有 → 友善指引
   throw new Error(
     `尚未設定 ${PROVIDER_LABELS[provider]} 的 App 憑證。\n\n` +
@@ -169,8 +182,8 @@ export function getCredentialStatus(provider: CredentialProvider): CredentialSta
       /* decrypt 失敗 → 當未設定，往下看檔案 */
     }
   }
-  const filePath = secretsFilePath(provider);
-  if (existsSync(filePath)) {
+  for (const filePath of [secretsFilePath(provider), builtinSecretsFilePath(provider)]) {
+    if (!existsSync(filePath)) continue;
     try {
       const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
       // stub 檔（REPLACE_WITH_... placeholder）不算已設定

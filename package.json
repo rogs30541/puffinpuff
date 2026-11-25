@@ -1,7 +1,7 @@
 {
   "name": "puffinpuff",
   "productName": "海鸚泡芙 PuffinPuff",
-  "version": "0.10.4",
+  "version": "0.11.0",
   "description": "一次發布到 YouTube Shorts、FB Reels、IG Reels 的桌面工具",
   "main": "./out/main/index.js",
   "author": "VVLEE",
@@ -13,6 +13,8 @@
     "preview": "electron-vite preview",
     "build:win": "electron-vite build && electron-builder --win",
     "release:win": "npm run build:win && node scripts/post-release.cjs",
+    "build:public": "electron-vite build && electron-builder --win --config electron-builder.public.yml",
+    "release:public": "npm run build:public && node scripts/post-release.cjs --public",
     "git:push": "node scripts/post-release.cjs",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",

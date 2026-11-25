@@ -4,6 +4,24 @@
 
 ---
 
+## v0.11.0 — 2026-11-25 — 雙版本發布架構（測試版／公開版）
+
+### ✨ 新增
+- **發布通道拆成兩條**：
+  - **測試版**（現行通道，不變）：`npm run release:win` → repo `puffinpuff`、
+    `PuffinPuff-x.y.z-Setup.exe`，憑證由使用者自填（或開發 secrets/）。
+    新功能一律先發這條，既有安裝會照常自動更新
+  - **公開版**（新通道）：`npm run release:public` → repo `puffinpuff-releases`、
+    `PuffinPuff-x.y.z-Public-Setup.exe`，**內建憑證**（`secrets-public/` 打包進
+    `resources/secrets/`），使用者安裝即用、免自填憑證；
+    更新 feed 獨立，測試版先發不會打到公開版使用者；只在確認穩定後手動發布
+- 憑證層新增第 2.5 層來源：公開版安裝檔的 `resources/secrets/`（內建檔案，
+  不匯入 DB；使用者自貼憑證仍以 DB 優先），設定頁顯示「內建檔案」
+- 新增 `electron-builder.public.yml`（公開版打包設定）與 `secrets-public/`
+  （內建憑證來源，gitignored；TikTok 等正式審核過切 production 憑證才放）
+
+---
+
 ## v0.10.4 — 2026-11-25 — 修 TikTok OAuth PKCE（token 交換失敗）
 
 ### 🐛 修復

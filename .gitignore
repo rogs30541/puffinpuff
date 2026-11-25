@@ -12,6 +12,8 @@ Thumbs.db
 # 機密憑證（絕對不可上傳 — 含 OAuth client secrets + tokens）
 secrets/*.json
 secrets/*.txt
+# 公開發布版內建憑證來源（只進公開版安裝檔，不進版控）
+secrets-public/*.json
 .env
 .env.local
 .env.*.local
@@ -23,6 +25,7 @@ secrets/*.txt
 
 # Electron Builder 輸出（200MB+ exe / 完整 unpacked / blockmap）
 release/
+release-public/
 *.exe
 *.dmg
 *.AppImage

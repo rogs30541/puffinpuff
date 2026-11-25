@@ -1,0 +1,71 @@
+# ============================================================
+# 公開發布版 build 設定（v0.11.0）
+#
+# 與 electron-builder.yml（測試版）的差異只有三處：
+#   1. extraResources 多了 secrets-public/ → resources/secrets/
+#      （內建憑證，使用者免自填；只放可公開發行的憑證）
+#   2. publish repo = puffinpuff-releases（公開版更新 feed 與測試版分流，
+#      測試版先發不會打到公開版使用者）
+#   3. artifactName 加 -Public、輸出 release-public/（不跟測試版互蓋）
+#
+# ⚠ 改共通設定（files / asarUnpack / nsis 等）時，兩份 yml 要一起改
+# 指令：npm run build:public（只打包）／ npm run release:public（打包＋發布）
+# ============================================================
+appId: tw.vvlee.puffinpuff
+productName: 海鸚泡芙 PuffinPuff
+copyright: © 2026 VVLEE
+
+directories:
+  output: release-public
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
+  # 內建憑證（公開版核心差異）：secrets-public/ 只放 production 可公開的憑證
+  # TikTok 目前是 sandbox 憑證，等 TikTok 正式審核過、切 production 後才放進來
+  - from: secrets-public
+    to: secrets
+    filter:
+      - "*.json"
+
+asarUnpack:
+  - node_modules/ffmpeg-static/**/*
+  - node_modules/ffprobe-static/**/*
+  - node_modules/sql.js/dist/**/*
+
+# 公開版更新 feed：獨立 repo，只放你確認過的穩定版
+publish:
+  provider: github
+  owner: rogs30541
+  repo: puffinpuff-releases
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: "PuffinPuff-${version}-Public-Setup.${ext}"
+  verifyUpdateCodeSignature: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 海鸚泡芙 PuffinPuff
+  language: 1028  # zh-TW
+  warningsAsErrors: false
