@@ -27,13 +27,24 @@ asarUnpack:
   - node_modules/ffprobe-static/**/*
   - node_modules/sql.js/dist/**/*
 
+# v0.10.1：自動更新（electron-updater）— GitHub Releases 當更新源
+#   publish 設定讓 build 內嵌 app-update.yml（updater feed），並產 latest.yml
+publish:
+  provider: github
+  owner: rogs30541
+  repo: puffinpuff
+
 win:
   target:
     - target: nsis
       arch:
         - x64
   icon: build/icon.ico
-  artifactName: "${productName}-${version}-Setup.${ext}"
+  # v0.10.1：artifactName 改純 ASCII — GitHub Release 會把中文+空格的資產名
+  #   淨化成 PuffinPuff-x.y.z-Setup.exe，latest.yml 若寫原名會 404，更新器抓不到
+  artifactName: "PuffinPuff-${version}-Setup.${ext}"
+  # 未簽章 build：關閉更新檔簽章驗證（否則簽章比對會擋更新）
+  verifyUpdateCodeSignature: false
 
 nsis:
   oneClick: false

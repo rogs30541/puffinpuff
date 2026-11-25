@@ -29,6 +29,7 @@ import { registerWatchersHandlers } from './ipc/watchersHandlers';
 import { registerTunnelHandlers } from './ipc/tunnelHandlers';
 import { registerCredentialsHandlers } from './ipc/credentialsHandlers';
 import { registerTemplatesHandlers } from './ipc/templatesHandlers';
+import { registerUpdateHandlers, scheduleStartupUpdateCheck } from './ipc/updateHandlers';
 import { startAllWatchers, stopAllWatchers } from './lib/folderWatcher';
 import { existsSync as fsExistsSync, writeFileSync as fsWriteFileSync } from 'node:fs';
 import { setAutoLaunch, isAutoLaunchEnabled, isAutoLaunchPermanentlyDisabled } from './lib/autoLaunch';
@@ -304,6 +305,8 @@ app.whenReady().then(async () => {
   registerTunnelHandlers();
   registerCredentialsHandlers();
   registerTemplatesHandlers();
+  registerUpdateHandlers(); // v0.10.1：自動更新
+  scheduleStartupUpdateCheck(() => mainWindow?.webContents ?? null);
 
   bootstrapSchedulesFromDB();
   startAllWatchers(); // v0.4.1：監聽資料夾

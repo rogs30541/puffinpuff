@@ -660,9 +660,35 @@ export interface TunnelNamedConfigPublic {
   updatedAt: number;
 }
 
+/** v0.10.1：App 自動更新 */
+export interface UpdateCheckResult {
+  status: 'available' | 'latest' | 'dev' | 'error';
+  currentVersion: string;
+  latestVersion?: string;
+  notes?: string;
+  message?: string;
+}
+
+export interface UpdateProgress {
+  percent: number;
+  bytesPerSecond: number;
+  transferred: number;
+  total: number;
+}
+
 export interface PuffinAPI {
   getVersion(): Promise<string>;
   ping(): Promise<string>;
+  /** v0.10.1：自動更新 */
+  updates: {
+    check(): Promise<UpdateCheckResult>;
+    download(): Promise<boolean>;
+    install(): Promise<boolean>;
+    onAvailable(cb: (r: UpdateCheckResult) => void): () => void;
+    onProgress(cb: (p: UpdateProgress) => void): () => void;
+    onDownloaded(cb: (info: { version: string }) => void): () => void;
+    onError(cb: (e: { message: string }) => void): () => void;
+  };
   accounts: {
     list(): Promise<AccountPublic[]>;
     connectGoogle(): Promise<AccountPublic>;

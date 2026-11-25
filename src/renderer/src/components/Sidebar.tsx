@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Stack, Text, UnstyledButton, Group, Badge } from '@mantine/core';
+import { Stack, Text, UnstyledButton, Group, Badge, Button, Progress, Tooltip } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import {
   IconSparkles,
   IconCalendarEvent,
@@ -7,6 +8,9 @@ import {
   IconUserCircle,
   IconSettings,
   IconClipboardText,
+  IconRefresh,
+  IconDownload,
+  IconRocket,
   type Icon
 } from '@tabler/icons-react';
 
@@ -33,12 +37,78 @@ interface SidebarProps {
   onChange: (key: PageKey) => void;
 }
 
+type UpdateUiState =
+  | { phase: 'idle' }
+  | { phase: 'checking' }
+  | { phase: 'latest' }
+  | { phase: 'available'; latest: string }
+  | { phase: 'downloading'; latest: string; percent: number }
+  | { phase: 'ready'; latest: string };
+
 export function Sidebar({ active, onChange }: SidebarProps) {
   // v0.9.8：版本號動態抓真實值（原本寫死 v0.1.0）
   const [version, setVersion] = useState<string>('');
+  // v0.10.1：自動更新狀態機
+  const [update, setUpdate] = useState<UpdateUiState>({ phase: 'idle' });
+
   useEffect(() => {
     window.puffin.system.getVersion().then(setVersion).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const offAvailable = window.puffin.updates.onAvailable((r) => {
+      if (r.latestVersion) setUpdate({ phase: 'available', latest: r.latestVersion });
+    });
+    const offProgress = window.puffin.updates.onProgress((p) => {
+      setUpdate((u) =>
+        u.phase === 'downloading' || u.phase === 'available'
+          ? { phase: 'downloading', latest: 'latest' in u ? u.latest : '', percent: p.percent }
+          : u
+      );
+    });
+    const offDone = window.puffin.updates.onDownloaded((i) => {
+      setUpdate({ phase: 'ready', latest: i.version });
+    });
+    const offErr = window.puffin.updates.onError((e) => {
+      notifications.show({ title: '更新失敗', message: e.message, color: 'red' });
+      setUpdate({ phase: 'idle' });
+    });
+    return () => {
+      offAvailable();
+      offProgress();
+      offDone();
+      offErr();
+    };
+  }, []);
+
+  const handleCheck = async (): Promise<void> => {
+    setUpdate({ phase: 'checking' });
+    const r = await window.puffin.updates.check();
+    if (r.status === 'available' && r.latestVersion) {
+      setUpdate({ phase: 'available', latest: r.latestVersion });
+    } else if (r.status === 'latest') {
+      setUpdate({ phase: 'latest' });
+      notifications.show({ title: '已是最新版本', message: `v${r.currentVersion}`, color: 'mint' });
+      setTimeout(() => setUpdate({ phase: 'idle' }), 3000);
+    } else if (r.status === 'dev') {
+      notifications.show({ title: '開發模式', message: '不檢查更新', color: 'gray' });
+      setUpdate({ phase: 'idle' });
+    } else {
+      notifications.show({ title: '檢查更新失敗', message: r.message ?? '未知錯誤', color: 'red' });
+      setUpdate({ phase: 'idle' });
+    }
+  };
+
+  const handleDownload = async (): Promise<void> => {
+    if (update.phase !== 'available') return;
+    setUpdate({ phase: 'downloading', latest: update.latest, percent: 0 });
+    try {
+      await window.puffin.updates.download();
+    } catch (e) {
+      notifications.show({ title: '下載失敗', message: (e as Error).message, color: 'red' });
+      setUpdate({ phase: 'available', latest: update.latest });
+    }
+  };
 
   return (
     <Stack gap={4} p="md" h="100%">
@@ -48,9 +118,56 @@ export function Sidebar({ active, onChange }: SidebarProps) {
           🐧 海鸚泡芙
         </Text>
       </Group>
-      <Badge variant="light" color="mint" size="sm" mx="xs" mb="sm">
-        {version ? `v${version}` : '...'}
-      </Badge>
+      <Group gap={6} mx="xs" mb="sm" wrap="nowrap">
+        <Badge variant="light" color="mint" size="sm">
+          {version ? `v${version}` : '...'}
+        </Badge>
+        {(update.phase === 'idle' || update.phase === 'checking' || update.phase === 'latest') && (
+          <Tooltip label="檢查 GitHub 上有沒有新版本">
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-xs"
+              loading={update.phase === 'checking'}
+              onClick={handleCheck}
+              leftSection={<IconRefresh size={12} />}
+            >
+              檢查更新
+            </Button>
+          </Tooltip>
+        )}
+      </Group>
+      {update.phase === 'available' && (
+        <Button
+          mx="xs"
+          mb="sm"
+          size="compact-sm"
+          color="sunny"
+          variant="light"
+          onClick={handleDownload}
+          leftSection={<IconDownload size={14} />}
+        >
+          下載新版 v{update.latest}
+        </Button>
+      )}
+      {update.phase === 'downloading' && (
+        <Stack gap={4} mx="xs" mb="sm">
+          <Text size="xs" c="dimmed">下載 v{update.latest} 中… {update.percent}%</Text>
+          <Progress value={update.percent} size="sm" color="mint" />
+        </Stack>
+      )}
+      {update.phase === 'ready' && (
+        <Button
+          mx="xs"
+          mb="sm"
+          size="compact-sm"
+          color="mint"
+          onClick={() => window.puffin.updates.install()}
+          leftSection={<IconRocket size={14} />}
+        >
+          重啟並安裝 v{update.latest}
+        </Button>
+      )}
 
       {/* 主導覽 */}
       {NAV_ITEMS.map((item) => {

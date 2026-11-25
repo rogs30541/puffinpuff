@@ -85,7 +85,8 @@ run(`git push origin ${tag} --force`);
 // 7. 若有 installer .exe，自動建 GitHub Release + 上傳 binary
 const path = require('node:path');
 const fs = require('node:fs');
-const installerPath = path.join(__dirname, '..', 'release', `海鸚泡芙 PuffinPuff-${version}-Setup.exe`);
+// v0.10.1：artifactName 改純 ASCII（配合 electron-updater / GitHub 資產名淨化）
+const installerPath = path.join(__dirname, '..', 'release', `PuffinPuff-${version}-Setup.exe`);
 if (fs.existsSync(installerPath)) {
   const sizeMB = (fs.statSync(installerPath).size / 1024 / 1024).toFixed(1);
   console.log(`\n[release] 發現 installer (${sizeMB} MB)，建立 GitHub Release...`);
@@ -97,14 +98,20 @@ if (fs.existsSync(installerPath)) {
   } catch {
     // 沒有舊的，跳過
   }
-  // 建新 Release + 上傳 installer
-  const releaseNotes = `PuffinPuff ${tag}\n\n下載 \`海鸚泡芙 PuffinPuff-${version}-Setup.exe\` 安裝。\n\n完整變更紀錄請見 [CHANGELOG.md](../blob/main/CHANGELOG.md)。`;
+  // v0.10.1：自動更新需要的檔案一併上傳（latest.yml + blockmap）
+  const extraAssets = [];
+  const latestYml = path.join(__dirname, '..', 'release', 'latest.yml');
+  const blockmap = `${installerPath}.blockmap`;
+  if (fs.existsSync(latestYml)) extraAssets.push(`"${latestYml}"`);
+  if (fs.existsSync(blockmap)) extraAssets.push(`"${blockmap}"`);
+  // 建新 Release + 上傳 installer + 更新 metadata
+  const releaseNotes = `PuffinPuff ${tag}\n\n下載 \`PuffinPuff-${version}-Setup.exe\` 安裝（App 內建自動更新也會抓此版）。\n\n完整變更紀錄請見 [CHANGELOG.md](../blob/main/CHANGELOG.md)。`;
   // 用 stdin 傳 notes 避免 Windows 命令列轉義問題
   execSync(
-    `gh release create ${tag} "${installerPath}" --title "${tag}" --notes-file -`,
+    `gh release create ${tag} "${installerPath}" ${extraAssets.join(' ')} --title "${tag}" --notes-file -`,
     { input: releaseNotes, stdio: ['pipe', 'inherit', 'inherit'] }
   );
-  console.log(`[release] ✅ Installer 已上傳到 Release`);
+  console.log(`[release] ✅ Installer + 更新 metadata（latest.yml/blockmap）已上傳到 Release`);
 } else {
   console.log(`\n[release] ⚠ 找不到 installer ${installerPath}`);
   console.log('[release]   如果你只跑 git:push（不打包），這是預期；只跑 release:win 才會產 installer');

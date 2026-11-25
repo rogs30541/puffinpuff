@@ -10,7 +10,7 @@ import {
   type CredentialStatus
 } from '../lib/credentialsStore';
 
-const VALID_PROVIDERS: CredentialProvider[] = ['google', 'meta', 'threads'];
+const VALID_PROVIDERS: CredentialProvider[] = ['google', 'meta', 'threads', 'tiktok'];
 
 function assertProvider(p: string): CredentialProvider {
   if (!VALID_PROVIDERS.includes(p as CredentialProvider)) {

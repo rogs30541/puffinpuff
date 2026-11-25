@@ -4,6 +4,23 @@
 
 ---
 
+## v0.10.1 — 2026-11-25 — 🔄 內建自動更新 + TikTok 憑證儲存修復
+
+### ✨ 新增：App 內建自動更新（electron-updater + GitHub Releases）
+- 側欄版本號旁新增「檢查更新」按鈕；啟動 15 秒後也會自動檢查一次
+- 發現新版 → 「下載新版 vX.Y.Z」（含進度條）→ 「重啟並安裝」一鍵完成
+- 下載與安裝都由使用者按鈕觸發（autoDownload 關閉，不偷跑）
+- electron-builder 加 publish(github)；post-release 連帶上傳 latest.yml + blockmap
+- ⚠ 安裝檔名改純 ASCII：`PuffinPuff-x.y.z-Setup.exe`（原中文+空格檔名會被
+  GitHub 資產名淨化改名，導致 latest.yml 對不上 → 更新器 404）
+- 未簽章 build：`verifyUpdateCodeSignature: false`
+
+### 🐛 修復
+- **TikTok 憑證存不進去（「未知的 provider：tiktok」）**：v0.10.0 漏改
+  credentialsHandlers 的 provider 白名單，設定頁貼 TikTok JSON 會直接報錯
+
+---
+
 ## v0.10.0 — 2026-11-25 — 🎵 第 5 平台：TikTok 影片發布
 
 ### ✨ 新增

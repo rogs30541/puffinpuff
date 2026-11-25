@@ -37,6 +37,33 @@ const api: PuffinAPI = {
   getVersion: () => ipcRenderer.invoke('app:version'),
   ping: () => ipcRenderer.invoke('app:ping'),
 
+  // v0.10.1：自動更新
+  updates: {
+    check: () => ipcRenderer.invoke('updates:check'),
+    download: () => ipcRenderer.invoke('updates:download') as Promise<boolean>,
+    install: () => ipcRenderer.invoke('updates:install') as Promise<boolean>,
+    onAvailable: (cb) => {
+      const h = (_e: unknown, r: Parameters<typeof cb>[0]) => cb(r);
+      ipcRenderer.on('updates:available', h);
+      return () => ipcRenderer.removeListener('updates:available', h);
+    },
+    onProgress: (cb) => {
+      const h = (_e: unknown, p: Parameters<typeof cb>[0]) => cb(p);
+      ipcRenderer.on('updates:progress', h);
+      return () => ipcRenderer.removeListener('updates:progress', h);
+    },
+    onDownloaded: (cb) => {
+      const h = (_e: unknown, i: Parameters<typeof cb>[0]) => cb(i);
+      ipcRenderer.on('updates:downloaded', h);
+      return () => ipcRenderer.removeListener('updates:downloaded', h);
+    },
+    onError: (cb) => {
+      const h = (_e: unknown, er: Parameters<typeof cb>[0]) => cb(er);
+      ipcRenderer.on('updates:error', h);
+      return () => ipcRenderer.removeListener('updates:error', h);
+    }
+  },
+
   accounts: {
     list: () => ipcRenderer.invoke('accounts:list') as Promise<AccountPublic[]>,
     connectGoogle: () => ipcRenderer.invoke('accounts:connectGoogle') as Promise<AccountPublic>,
