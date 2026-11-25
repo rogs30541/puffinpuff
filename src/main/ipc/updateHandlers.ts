@@ -103,15 +103,31 @@ export function registerUpdateHandlers(): void {
   });
 }
 
-/** 啟動後延遲自動檢查：發現新版就通知 renderer（側欄亮起） */
+/**
+ * 自動檢查排程：
+ *  - 啟動 15 秒後檢查一次
+ *  - 之後每 24 小時檢查一次（v0.10.2 — app 常駐系統匣，長開也會收到新版通知）
+ *  - 同一個新版本只通知一次，不重複騷擾
+ */
+const DAILY_CHECK_MS = 24 * 60 * 60 * 1000;
+let lastNotifiedVersion: string | null = null;
+
 export function scheduleStartupUpdateCheck(getWebContents: () => WebContents | null): void {
   if (!app.isPackaged) return;
-  setTimeout(async () => {
+  const runCheck = async (): Promise<void> => {
     const wc = getWebContents();
     if (wc) lastWebContents = wc;
     const result = await checkForUpdates();
-    if (result.status === 'available') {
+    if (
+      result.status === 'available' &&
+      result.latestVersion &&
+      result.latestVersion !== lastNotifiedVersion
+    ) {
+      lastNotifiedVersion = result.latestVersion;
       send('updates:available', result);
+      console.log(`[updates] 發現新版 v${result.latestVersion}（目前 v${result.currentVersion}）`);
     }
-  }, 15_000);
+  };
+  setTimeout(() => void runCheck(), 15_000);
+  setInterval(() => void runCheck(), DAILY_CHECK_MS);
 }
