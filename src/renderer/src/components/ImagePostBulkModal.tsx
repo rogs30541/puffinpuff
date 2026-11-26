@@ -43,6 +43,7 @@ import type {
   ImagePostBulkRow,
   ImagePostPair
 } from '../../../shared/types';
+import { accountLabel } from '../../../shared/types';
 import { TemplateApplyBar } from './TemplateApplyBar';
 
 interface Props {
@@ -435,7 +436,7 @@ export function ImagePostBulkModal({ opened, onClose, onImported }: Props) {
                       placeholder={igAccounts.length === 0 ? '請先連結 Instagram' : '選擇 IG'}
                       value={targetInstagram}
                       onChange={setTargetInstagram}
-                      data={igAccounts.map((a) => ({ value: String(a.id), label: a.displayName }))}
+                      data={igAccounts.map((a) => ({ value: String(a.id), label: accountLabel(a) }))}
                       disabled={igAccounts.length === 0}
                       radius="md"
                       size="xs"
@@ -522,7 +523,7 @@ export function ImagePostBulkModal({ opened, onClose, onImported }: Props) {
                         placeholder={igAccounts.length === 0 ? '請先連結 Instagram' : '選擇 IG'}
                         value={targetInstagram}
                         onChange={setTargetInstagram}
-                        data={igAccounts.map((a) => ({ value: String(a.id), label: a.displayName }))}
+                        data={igAccounts.map((a) => ({ value: String(a.id), label: accountLabel(a) }))}
                         disabled={igAccounts.length === 0}
                         radius="md"
                         size="xs"

@@ -58,6 +58,24 @@ export interface AccountPublic {
   updatedAt: number;
 }
 
+/**
+ * v0.11.1：帳號在選單／卡片上的顯示名稱。
+ * IG 的 displayName 是 @username（代號不好認、容易選錯帳號），
+ * 後面補上暱稱：優先用連線時存的 igName，舊資料 fallback 連動粉專名 linkedPageName。
+ * 其他平台 displayName 本來就是暱稱，原樣回傳。
+ */
+export function accountLabel(
+  a: Pick<AccountPublic, 'platform' | 'displayName' | 'metadata'>
+): string {
+  if (a.platform !== 'instagram') return a.displayName;
+  const md = a.metadata ?? {};
+  const igName = typeof md.igName === 'string' ? md.igName : '';
+  const pageName = typeof md.linkedPageName === 'string' ? md.linkedPageName : '';
+  const nick = igName || pageName;
+  if (!nick || a.displayName.includes(nick)) return a.displayName;
+  return `${a.displayName}（${nick}）`;
+}
+
 export interface MetaConnectResult {
   user: { id: string; name: string };
   facebookAccounts: AccountPublic[];

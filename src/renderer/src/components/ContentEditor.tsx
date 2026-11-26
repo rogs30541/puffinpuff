@@ -29,6 +29,7 @@ import {
   DEFAULT_PUBLISH_CONTENT,
   FEATURE_FLAGS,
   PLATFORM_LIMITS,
+  accountLabel,
   type AccountPublic,
   type PublishContent,
   type Privacy
@@ -169,7 +170,7 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
             description={`此平台目前連線 ${platformAccounts.length} 個帳號`}
             data={platformAccounts.map((a) => ({
               value: String(a.id),
-              label: a.displayName
+              label: accountLabel(a)
             }))}
             value={selectedAccountId !== undefined ? String(selectedAccountId) : null}
             onChange={(v) =>
@@ -193,7 +194,7 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
               {selectedAccount.displayName[0]}
             </Avatar>
             <Text size="xs" c="dimmed">
-              將發布到：<Text component="span" fw={600}>{selectedAccount.displayName}</Text>
+              將發布到：<Text component="span" fw={600}>{accountLabel(selectedAccount)}</Text>
             </Text>
           </Group>
         )}

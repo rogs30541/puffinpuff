@@ -289,6 +289,7 @@ export async function connectMetaAccount(): Promise<MetaConnectResult> {
         expiresAt: null,
         metadata: {
           thumbnail: ig.profile_picture_url ?? null,
+          igName: ig.name ?? null, // v0.11.1：IG 帳號暱稱（選單顯示 @username（暱稱）用）
           linkedPageId: page.id,
           linkedPageName: page.name,
           userName: me.name

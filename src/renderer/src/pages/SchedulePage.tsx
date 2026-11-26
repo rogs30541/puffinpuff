@@ -48,6 +48,7 @@ import {
 import {
   BRAND_DEFAULTS,
   substituteTitleFilename,
+  accountLabel,
   type AccountPublic,
   type BulkScheduleRow,
   type FolderVideoFile,
@@ -667,7 +668,7 @@ function BulkImportModal({ opened, onClose, onImported }: BulkImportModalProps) 
                         onChange={setTargetYouTube}
                         data={ytAccounts.map((a) => ({
                           value: String(a.id),
-                          label: a.displayName
+                          label: accountLabel(a)
                         }))}
                         disabled={ytAccounts.length === 0}
                         radius="md"
@@ -687,7 +688,7 @@ function BulkImportModal({ opened, onClose, onImported }: BulkImportModalProps) 
                         onChange={setTargetFacebook}
                         data={fbAccounts.map((a) => ({
                           value: String(a.id),
-                          label: a.displayName
+                          label: accountLabel(a)
                         }))}
                         disabled={fbAccounts.length === 0}
                         radius="md"
@@ -707,7 +708,7 @@ function BulkImportModal({ opened, onClose, onImported }: BulkImportModalProps) 
                         onChange={setTargetInstagram}
                         data={igAccounts.map((a) => ({
                           value: String(a.id),
-                          label: a.displayName
+                          label: accountLabel(a)
                         }))}
                         disabled={igAccounts.length === 0}
                         radius="md"

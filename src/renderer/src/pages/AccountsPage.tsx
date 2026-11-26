@@ -27,7 +27,7 @@ import {
   IconInfoCircle,
   type Icon
 } from '@tabler/icons-react';
-import { FEATURE_FLAGS, type AccountPublic, type Platform } from '../../../shared/types';
+import { FEATURE_FLAGS, accountLabel, type AccountPublic, type Platform } from '../../../shared/types';
 
 interface PlatformDef {
   platform: Platform;
@@ -158,7 +158,7 @@ function PlatformCard({
                 {acct.displayName[0]}
               </Avatar>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <Text size="sm" fw={600} lineClamp={1}>{acct.displayName}</Text>
+                <Text size="sm" fw={600} lineClamp={1}>{accountLabel(acct)}</Text>
                 <Text size="xs" c="dimmed" lineClamp={1}>ID: {acct.externalId}</Text>
               </div>
             </Group>

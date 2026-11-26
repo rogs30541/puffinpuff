@@ -38,6 +38,7 @@ import {
 } from '@tabler/icons-react';
 import {
   BRAND_DEFAULTS,
+  accountLabel,
   type AccountPublic,
   type WatchedFolder,
   type WatcherTemplate
@@ -461,7 +462,7 @@ export function WatchersModal({ opened, onClose }: Props) {
                       }
                     }
                   })}
-                  data={igAccounts.map((a) => ({ value: String(a.id), label: a.displayName }))}
+                  data={igAccounts.map((a) => ({ value: String(a.id), label: accountLabel(a) }))}
                   disabled={igAccounts.length === 0}
                   placeholder={igAccounts.length === 0 ? '請先連結 Instagram' : '選擇 IG'}
                   radius="md"
